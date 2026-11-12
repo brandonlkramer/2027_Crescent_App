@@ -1,0 +1,712 @@
+<title>Crescent</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#2450a8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-22 -22 44 44'%3E%3Ccircle r='20' fill='%23e5ecf9'/%3E%3Cpath d='M0,-20 A20,20 0 0 1 0,20 A13,20 0 0 0 0,-20Z' fill='%232450a8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* Layout: single phone-first column; each question sits on an index card with a red margin rule; keyboard docks below the card in quizzes.
+   Brand: Crescent. The header moon waxes from a thin crescent to a full moon as the student learns the meanings in the selected set. */
+:root {
+  --paper: #f3f6fa;
+  --surface: #ffffff;
+  --ink: #16233b;
+  --muted: #586580;
+  --line: #d7dfea;
+  --accent: #2450a8;
+  --accent-soft: #e5ecf9;
+  --rule: #e2a7a2;
+  --ok: #1d7448;
+  --ok-soft: #e1f2e8;
+  --bad: #b0352b;
+  --bad-soft: #fbe8e5;
+  --key: #e9eef5;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --font-ja: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1421; --surface: #172034; --ink: #e8edf6; --muted: #9ba7be; --line: #2a3651;
+    --accent: #93b2f6; --accent-soft: #1d2b4b; --rule: #6a3633; --ok: #6fd29d; --ok-soft: #15352a;
+    --bad: #ff8d81; --bad-soft: #3b1e1c; --key: #222d45; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1421; --surface: #172034; --ink: #e8edf6; --muted: #9ba7be; --line: #2a3651;
+  --accent: #93b2f6; --accent-soft: #1d2b4b; --rule: #6a3633; --ok: #6fd29d; --ok-soft: #15352a;
+  --bad: #ff8d81; --bad-soft: #3b1e1c; --key: #222d45; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+}
+.app { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand-name { display: flex; align-items: center; gap: 12px; }
+.moon { width: 44px; height: 44px; flex: none; display: block; }
+.moon .disk { fill: var(--accent-soft); stroke: var(--line); stroke-width: 1; }
+.moon .lit { fill: var(--accent); }
+.moon.full .lit { fill: var(--accent); filter: drop-shadow(0 0 3px var(--accent)); }
+.brand-text { display: flex; flex-direction: column; gap: 1px; }
+h1 { font-family: var(--font-display); font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; line-height: 1.1; }
+.moon-caption { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--key); border-radius: 999px; padding: 4px; gap: 4px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: 700 0.95rem var(--font-body); padding: 9px 10px; border-radius: 999px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+h2 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.sets { display: flex; flex-direction: column; gap: 10px; }
+.set-option { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--surface); cursor: pointer; }
+.set-option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.set-option input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+.set-option strong { display: block; }
+.btn { border: 0; border-radius: 12px; padding: 13px 18px; font: 700 1rem var(--font-body); cursor: pointer; background: var(--accent); color: var(--surface); }
+.btn.secondary { background: var(--key); color: var(--ink); }
+.btn:focus-visible, .tabs button:focus-visible, .key:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > .btn { flex: 1 1 160px; }
+.meta { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: var(--key); border-radius: 999px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s ease; }
+.timer { height: 14px; }
+.timer i { background: var(--accent); transition: none; }
+.timer-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.clock { font-family: var(--font-display); font-weight: 700; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--accent); }
+.clock small { font-size: 0.9rem; color: var(--muted); margin-left: 3px; }
+.clock.low { color: var(--bad); }
+.timer.low i { background: var(--bad); }
+.timer.paused i { opacity: 0.3; }
+.clock.paused { color: var(--muted); font-size: 1rem; font-family: var(--font-body); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 18px 18px; box-shadow: 0 2px 10px rgba(22,35,59,.06); display: flex; flex-direction: column; gap: 14px; }
+.card::before { content: ""; display: block; height: 22px; border-bottom: 2px solid var(--rule); margin: 0 -18px; }
+.recycle { font-size: 0.8rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.sentence { font-size: 1.35rem; line-height: 1.6; }
+.blank { display: inline-block; min-width: 4.5em; border-bottom: 2.5px solid var(--ink); margin: 0 2px; }
+.blank .hint { font-weight: 700; color: var(--accent); padding-left: 2px; }
+.fill-ok { color: var(--ok); font-weight: 700; border-bottom: 2.5px solid var(--ok); }
+.fill-bad { color: var(--bad); font-weight: 700; border-bottom: 2.5px solid var(--bad); }
+.cue { display: flex; align-items: baseline; gap: 10px; }
+.cue-label { font-family: var(--font-ja); font-size: 0.75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+.cue-text { font-family: var(--font-ja); font-weight: 700; font-size: 1.3rem; color: var(--accent); }
+.answer-form { display: flex; gap: 8px; }
+.answer-form input, .field input, .field select {
+  flex: 1; min-width: 0; font: 1.15rem var(--font-body); padding: 12px 14px; border-radius: 12px;
+  border: 1.5px solid var(--line); background: var(--paper); color: var(--ink);
+}
+.answer-form input[readonly] { opacity: .7; }
+.feedback { border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.feedback.ok { background: var(--ok-soft); color: var(--ok); font-weight: 700; }
+.feedback.bad { background: var(--bad-soft); }
+.feedback.bad .verdict { color: var(--bad); font-weight: 700; }
+.feedback .full { color: var(--ink); font-size: 1.05rem; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 420px) { .fields { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label, .field legend { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.field input, .field select { font-size: 1rem; padding: 10px 12px; background: var(--surface); }
+fieldset.field { border: 0; padding: 0; margin: 0; }
+.radios { display: flex; flex-direction: column; gap: 8px; }
+.summary-box { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; font-size: 0.95rem; }
+.summary-box .warn { color: var(--bad); display: block; margin-top: 4px; }
+.idchip { font-family: var(--font-display); font-weight: 600; letter-spacing: .01em; }
+.answer-display { min-height: 52px; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 1.3rem; letter-spacing: .04em; background: var(--paper); display: flex; align-items: center; }
+.answer-display .caret { display: inline-block; width: 2px; height: 1.3em; background: var(--accent); margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.kbd { display: flex; flex-direction: column; gap: 6px; user-select: none; -webkit-user-select: none; }
+.kbd-row { display: flex; gap: 5px; justify-content: center; }
+.key { flex: 1 1 0; max-width: 46px; height: 46px; border: 0; border-radius: 8px; background: var(--surface); color: var(--ink); font: 700 1.1rem var(--font-body); box-shadow: 0 1px 0 var(--line); cursor: pointer; touch-action: manipulation; }
+.key:active { background: var(--accent-soft); }
+.key:disabled { background: transparent; box-shadow: inset 0 0 0 1px var(--line); color: transparent; cursor: default; }
+.key.wide { max-width: 120px; flex: 2 1 0; font-size: 0.95rem; }
+.kbd-wrap { background: var(--key); border-radius: var(--radius); padding: 10px 6px; }
+.score { font-family: var(--font-display); font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.review { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.review li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.review .mark { font-weight: 700; font-size: 0.85rem; }
+.review .mark.ok { color: var(--ok); }
+.review .mark.bad { color: var(--bad); }
+textarea { width: 100%; min-height: 150px; font: 0.78rem ui-monospace, Menlo, Consolas, monospace; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
+footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } .answer-display .caret { animation: none; } }
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="brand-name">
+        <svg class="moon" id="moon" viewBox="-22 -22 44 44" role="img" aria-labelledby="moon-caption">
+          <circle class="disk" r="20"></circle>
+          <path class="lit" id="moon-lit" d=""></path>
+        </svg>
+        <div class="brand-text">
+          <h1>Crescent</h1>
+          <span class="moon-caption" id="moon-caption"></span>
+        </div>
+      </div>
+      <span class="tag">Prototype · week 1 draft</span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button id="tab-practice" role="tab" aria-selected="true" aria-controls="view-practice">Practice</button>
+      <button id="tab-quiz" role="tab" aria-selected="false" aria-controls="view-quiz">Quiz preview</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- PRACTICE -->
+    <section id="view-practice" role="tabpanel" aria-labelledby="tab-practice">
+      <div id="p-setup" class="stack">
+        <h2>Choose words to practice</h2>
+        <p class="muted small">Type the missing English word; its first letter is given. The Japanese cue shows the meaning and the form the sentence needs. You have 10 seconds for each sentence, the same as in the quiz. The moon fills as you learn the meanings in your set.</p>
+        <div class="sets" id="p-sets"></div>
+        <button class="btn" id="p-start">Start practice</button>
+      </div>
+
+      <div id="p-run" class="stack" hidden>
+        <div class="meta"><span id="p-count"></span><span id="p-missed"></span></div>
+        <div class="bar"><i id="p-bar"></i></div>
+        <div class="timer-row"><span class="meta">Time left</span><span class="clock" id="p-clock" aria-label="Seconds left"></span></div>
+        <div class="bar timer" id="p-timerbar" role="progressbar" aria-label="Time left"><i id="p-timer"></i></div>
+        <article class="card">
+          <span class="recycle" id="p-recycle" hidden>Again, with a new sentence</span>
+          <p class="sentence" id="p-sentence"></p>
+          <p class="cue"><span class="cue-label">意味</span><span class="cue-text" id="p-cue" lang="ja"></span></p>
+          <form class="answer-form" id="p-form">
+            <label for="p-input" class="sr">Your answer</label>
+            <input id="p-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
+            <button class="btn" id="p-check" type="submit">Check</button>
+          </form>
+          <div class="feedback" id="p-feedback" hidden aria-live="polite"></div>
+        </article>
+        <button class="btn secondary" id="p-quit" type="button">End session</button>
+      </div>
+
+      <div id="p-done" class="stack" hidden>
+        <h2>Session complete</h2>
+        <p class="score" id="p-score"></p>
+        <p class="muted" id="p-score-note"></p>
+        <div class="row">
+          <button class="btn" id="p-again-missed">Practice missed meanings</button>
+          <button class="btn secondary" id="p-again">Choose another set</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUIZ PREVIEW -->
+    <section id="view-quiz" role="tabpanel" aria-labelledby="tab-quiz" hidden>
+      <div id="q-setup" class="stack">
+        <h2>Classroom quiz preview</h2>
+        <p class="muted small">Runs on this device only, so you can try the format and settings. The live version will use a QR code and send results to the administrator.</p>
+        <div class="fields">
+          <div class="field">
+            <label for="q-week">Week</label>
+            <select id="q-week"></select>
+          </div>
+          <div class="field">
+            <label for="q-n">Questions</label>
+            <input id="q-n" type="number" min="1" max="20" value="5" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="q-review">Review words</label>
+            <select id="q-review">
+              <option value="0">0%</option><option value="10">10%</option><option value="20" selected>20%</option>
+              <option value="30">30%</option><option value="40">40%</option><option value="50">50%</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="q-time">Seconds per question</label>
+            <input id="q-time" type="number" min="3" max="60" value="10" inputmode="numeric">
+          </div>
+        </div>
+        <fieldset class="field">
+          <legend>Keyboard</legend>
+          <div class="radios">
+            <label class="set-option"><input type="radio" name="q-kbd" id="q-kbd-restricted" value="restricted" checked><span><strong>Restricted</strong><span class="muted small">Only letters in the answer can be typed</span></span></label>
+            <label class="set-option"><input type="radio" name="q-kbd" id="q-kbd-full" value="full"><span><strong>Full keyboard</strong><span class="muted small">The phone's normal keyboard</span></span></label>
+          </div>
+        </fieldset>
+        <div class="summary-box" id="q-summary"></div>
+        <p class="small">Student identifier: <span class="idchip" id="q-id"></span> <button class="btn secondary small" id="q-newid" type="button" style="padding:4px 10px;font-size:.8rem">New</button></p>
+        <button class="btn" id="q-start">Start quiz</button>
+      </div>
+
+      <div id="q-run" class="stack" hidden>
+        <div class="timer-row"><span class="meta" id="q-count"></span><span class="clock" id="q-clock" aria-label="Seconds left"></span></div>
+        <div class="bar timer" id="q-timerbar" role="progressbar" aria-label="Time left"><i id="q-timer"></i></div>
+        <article class="card">
+          <p class="sentence" id="q-sentence"></p>
+          <p class="cue"><span class="cue-label">意味</span><span class="cue-text" id="q-cue" lang="ja"></span></p>
+          <div class="answer-display" id="q-display" aria-live="polite"></div>
+          <form class="answer-form" id="q-form" hidden>
+            <label for="q-input" class="sr">Your answer</label>
+            <input id="q-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next">
+          </form>
+        </article>
+        <div class="kbd-wrap" id="q-kbd-wrap"><div class="kbd" id="q-kbd"></div></div>
+        <button class="btn" id="q-next" type="button">Next</button>
+      </div>
+
+      <div id="q-done" class="stack" hidden>
+        <h2>Quiz results</h2>
+        <p class="score" id="q-score"></p>
+        <p class="muted small" id="q-score-note"></p>
+        <ul class="review" id="q-review-list"></ul>
+        <div class="stack">
+          <h2>CSV row preview</h2>
+          <p class="muted small">This is the format the administrator export will use.</p>
+          <label for="q-csv" class="sr">CSV results</label>
+          <textarea id="q-csv" readonly></textarea>
+          <div class="row">
+            <button class="btn secondary" id="q-copy" type="button">Copy CSV</button>
+            <button class="btn" id="q-again" type="button">New quiz</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Crescent: like the moon, your vocabulary grows a little each week, from a thin crescent to a full moon.</span>
+    <span>Word list: New General Service List (Browne &amp; Culligan), Creative Commons.</span>
+    <span>Week 1: 50 words from NGSL rank 500, 82 meanings, one draft sentence per meaning (start-up set), written from COCA evidence. Not yet reviewed.</span>
+  </footer>
+</div>
+
+<script>
+/* ---------- Sample item bank (schema v1) ---------- */
+const WORDS_PER_WEEK = 50;
+const TIME_LIMIT = 10; /* seconds per item, shared by practice and quizzes */
+/* Week 1 bank: NGSL 1.2 content words from rank 500 (official NGSL 1.2 SFI ranks).
+   Sentences are original, written from COCA evidence (senses, forms, collocations); drafts awaiting review. */
+const BANK = [{"order":1,"rank":500,"lemma":"sign","senses":[{"id":"sign-n-notice","pos":"noun","gloss":"標識・看板","pattern":"stop/street/warning sign","items":[{"id":"sign-n-notice-1","s":"There is a stop ___ at the corner.","a":"sign","form":"base","cue":"標識"}]},{"id":"sign-n-indication","pos":"noun","gloss":"兆し・しるし","pattern":"a sign of; no sign(s) of; a good sign","items":[{"id":"sign-n-indication-1","s":"Dark clouds are often a ___ of rain.","a":"sign","form":"base","cue":"兆し"}]},{"id":"sign-v","pos":"verb","gloss":"署名する","pattern":"sign a contract/paper; sign here; sign up","items":[{"id":"sign-v-1","s":"Please ___ your name at the bottom.","a":"sign","form":"base","cue":"署名して"}]}]},{"order":2,"rank":501,"lemma":"claim","senses":[{"id":"claim-v","pos":"verb","gloss":"主張する","pattern":"claim that ...; claim to be ...","items":[{"id":"claim-v-1","s":"He ___ that he saw a ghost last night.","a":"claimed","form":"past","cue":"主張した"}]},{"id":"claim-n","pos":"noun","gloss":"主張","pattern":"make a claim; false claims; there is no proof for the claim","items":[{"id":"claim-n-1","s":"There is no evidence for his ___.","a":"claim","form":"base","cue":"主張"}]}]},{"order":3,"rank":502,"lemma":"relationship","senses":[{"id":"relationship-n-connection","pos":"noun","gloss":"関係","pattern":"a good relationship with; the relationship between","items":[{"id":"relationship-n-connection-1","s":"She has a good ___ with her boss.","a":"relationship","form":"base","cue":"関係"}]},{"id":"relationship-n-romantic","pos":"noun","gloss":"交際・恋愛関係","pattern":"be in a relationship; a serious relationship","items":[{"id":"relationship-n-romantic-1","s":"They have been in a ___ for two years.","a":"relationship","form":"base","cue":"交際（恋人関係）"}]}]},{"order":4,"rank":503,"lemma":"travel","senses":[{"id":"travel-v","pos":"verb","gloss":"旅行する・移動する","pattern":"travel to/around; travel for work","items":[{"id":"travel-v-1","s":"I want to ___ around Europe next summer.","a":"travel","form":"base","cue":"旅行する"}]},{"id":"travel-n","pos":"noun","gloss":"旅行","pattern":"air travel; space travel; travel agency","items":[{"id":"travel-n-1","s":"Air ___ is cheaper now than it used to be.","a":"travel","form":"base","cue":"（飛行機の）旅行"}]}]},{"order":5,"rank":504,"lemma":"enjoy","senses":[{"id":"enjoy-v","pos":"verb","gloss":"楽しむ","pattern":"really enjoy ...ing; enjoy the rest of your day","items":[{"id":"enjoy-v-1","s":"I really ___ cooking with my friends.","a":"enjoy","form":"base","cue":"楽しむ"}]}]},{"order":6,"rank":505,"lemma":"death","senses":[{"id":"death-n","pos":"noun","gloss":"死","pattern":"the death of; cause deaths; death penalty; to death","items":[{"id":"death-n-1","s":"The ___ of his dog made him very sad.","a":"death","form":"base","cue":"死"}]}]},{"order":7,"rank":506,"lemma":"nice","senses":[{"id":"nice-adj-pleasant","pos":"adjective","gloss":"すてきな・良い","pattern":"a nice time/day; look nice; nice to meet you","items":[{"id":"nice-adj-pleasant-1","s":"What a ___ day!","a":"nice","form":"base","cue":"すてきな"}]},{"id":"nice-adj-kind","pos":"adjective","gloss":"親切な・優しい","pattern":"be nice to someone; it was nice of you","items":[{"id":"nice-adj-kind-1","s":"Everyone at the school was very ___ to me.","a":"nice","form":"base","cue":"親切"}]}]},{"order":8,"rank":507,"lemma":"amount","senses":[{"id":"amount-n","pos":"noun","gloss":"量・額","pattern":"a small/large amount of; the full amount","items":[{"id":"amount-n-1","s":"Add a small ___ of water.","a":"amount","form":"base","cue":"量"}]}]},{"order":9,"rank":508,"lemma":"improve","senses":[{"id":"improve-v","pos":"verb","gloss":"向上させる・良くなる","pattern":"improve quality/health/skills; has improved","items":[{"id":"improve-v-1","s":"I want to ___ my English.","a":"improve","form":"base","cue":"向上させる"}]}]},{"order":10,"rank":509,"lemma":"picture","senses":[{"id":"picture-n-photo","pos":"noun","gloss":"写真","pattern":"take a picture of; show pictures","items":[{"id":"picture-n-photo-1","s":"Can I take your ___?","a":"picture","form":"base","cue":"写真"}]},{"id":"picture-n-drawing","pos":"noun","gloss":"絵","pattern":"draw/paint a picture of","items":[{"id":"picture-n-drawing-1","s":"My little sister drew a ___ of a cat.","a":"picture","form":"base","cue":"絵"}]}]},{"order":11,"rank":510,"lemma":"boy","senses":[{"id":"boy-n","pos":"noun","gloss":"男の子・少年","pattern":"a little boy; boys and girls","items":[{"id":"boy-n-1","s":"The little ___ is playing in the park.","a":"boy","form":"base","cue":"男の子"}]}]},{"order":12,"rank":511,"lemma":"regard","senses":[{"id":"regard-concerning","pos":"preposition-like (-ing)","gloss":"〜に関して","pattern":"regarding + noun","items":[{"id":"regard-concerning-1","s":"I have a question ___ the homework.","a":"regarding","form":"-ing","cue":"〜について"}]},{"id":"regard-v-consider","pos":"verb","gloss":"みなす","pattern":"regard X as Y; be regarded as","items":[{"id":"regard-v-consider-1","s":"Many people ___ him as the best player in Japan.","a":"regard","form":"base","cue":"みなす"}]},{"id":"regard-n-greetings","pos":"noun","gloss":"よろしく（という挨拶）","pattern":"give my regards to; Best regards","items":[{"id":"regard-n-greetings-1","s":"Please give my ___ to your mother.","a":"regards","form":"plural","cue":"よろしく（と伝えて）"}]}]},{"order":13,"rank":512,"lemma":"organization","senses":[{"id":"organization-n","pos":"noun","gloss":"組織・団体","pattern":"an international organization; join an organization","items":[{"id":"organization-n-1","s":"She works for an international ___.","a":"organization","form":"base","cue":"機関（組織）"}]}]},{"order":14,"rank":513,"lemma":"happy","senses":[{"id":"happy-adj-glad","pos":"adjective","gloss":"うれしい・幸せな","pattern":"so happy; happy with; Happy birthday","items":[{"id":"happy-adj-glad-1","s":"I am so ___ to see you again.","a":"happy","form":"base","cue":"うれしい"}]},{"id":"happy-adj-willing","pos":"adjective","gloss":"喜んで（〜する）","pattern":"be happy to + verb","items":[{"id":"happy-adj-willing-1","s":"I would be ___ to help you.","a":"happy","form":"base","cue":"喜んで"}]}]},{"order":15,"rank":514,"lemma":"couple","senses":[{"id":"couple-n-few","pos":"noun","gloss":"2、3（の）","pattern":"a couple of + plural noun","items":[{"id":"couple-n-few-1","s":"I will be back in a ___ of minutes.","a":"couple","form":"base","cue":"2、3（分）"}]},{"id":"couple-n-pair","pos":"noun","gloss":"夫婦・カップル","pattern":"a young/married couple","items":[{"id":"couple-n-pair-1","s":"The young ___ just got married.","a":"couple","form":"base","cue":"カップル"}]}]},{"order":16,"rank":515,"lemma":"act","senses":[{"id":"act-v-behave","pos":"verb","gloss":"行動する・振る舞う","pattern":"act like; act quickly; act as if","items":[{"id":"act-v-behave-1","s":"Please stop ___ like a child.","a":"acting","form":"-ing","cue":"振る舞う（のを）"}]},{"id":"act-n-deed","pos":"noun","gloss":"行為","pattern":"an act of kindness/violence","items":[{"id":"act-n-deed-1","s":"It was an ___ of kindness.","a":"act","form":"base","cue":"行為"}]},{"id":"act-v-perform","pos":"verb","gloss":"演じる","pattern":"act in a film; start acting","items":[{"id":"act-v-perform-1","s":"She wants to ___ in movies.","a":"act","form":"base","cue":"演技をする"}]}]},{"order":17,"rank":516,"lemma":"range","senses":[{"id":"range-n","pos":"noun","gloss":"範囲・幅","pattern":"a wide range of; price range; age range","items":[{"id":"range-n-1","s":"The store sells a wide ___ of products.","a":"range","form":"base","cue":"幅広い（品ぞろえ）"}]},{"id":"range-v","pos":"verb","gloss":"（〜から〜に）及ぶ","pattern":"range from X to Y","items":[{"id":"range-v-1","s":"Prices ___ from 500 to 3,000 yen.","a":"range","form":"base","cue":"（幅が）ある"}]}]},{"order":18,"rank":517,"lemma":"quality","senses":[{"id":"quality-n-standard","pos":"noun","gloss":"質・品質","pattern":"high quality; quality of life; air quality","items":[{"id":"quality-n-standard-1","s":"This shop sells high ___ food.","a":"quality","form":"base","cue":"品質"}]},{"id":"quality-n-trait","pos":"noun","gloss":"長所・資質","pattern":"good qualities; the qualities of a leader","items":[{"id":"quality-n-trait-1","s":"Being honest is one of her best ___.","a":"qualities","form":"plural","cue":"長所"}]}]},{"order":19,"rank":518,"lemma":"project","senses":[{"id":"project-n","pos":"noun","gloss":"計画・課題・プロジェクト","pattern":"work on a project; a science project","items":[{"id":"project-n-1","s":"We are working on a new ___.","a":"project","form":"base","cue":"プロジェクト"}]}]},{"order":20,"rank":519,"lemma":"round","senses":[{"id":"round-n","pos":"noun","gloss":"（試合などの）回","pattern":"the first/final round; another round","items":[{"id":"round-n-1","s":"Our team won the first ___.","a":"round","form":"base","cue":"回戦"}]},{"id":"round-adj","pos":"adjective","gloss":"丸い","pattern":"a round table; round trip","items":[{"id":"round-adj-1","s":"We sat at a ___ table.","a":"round","form":"base","cue":"丸い"}]}]},{"order":21,"rank":520,"lemma":"opportunity","senses":[{"id":"opportunity-n","pos":"noun","gloss":"機会・チャンス","pattern":"a great opportunity to; get/miss the opportunity","items":[{"id":"opportunity-n-1","s":"This is a great ___ to practice English.","a":"opportunity","form":"base","cue":"機会"}]}]},{"order":22,"rank":521,"lemma":"road","senses":[{"id":"road-n","pos":"noun","gloss":"道路・道","pattern":"cross the road; down the road; road trip","items":[{"id":"road-n-1","s":"Be careful when you cross the ___.","a":"road","form":"base","cue":"道路"}]}]},{"order":23,"rank":522,"lemma":"accord","senses":[{"id":"accord-according","pos":"preposition-like (-ing)","gloss":"〜によると","pattern":"according to","items":[{"id":"accord-according-1","s":"___ to the news, it will rain tomorrow.","a":"according","form":"-ing","cue":"（〜に）よると"}]}]},{"order":24,"rank":523,"lemma":"list","senses":[{"id":"list-n","pos":"noun","gloss":"リスト・一覧","pattern":"make a list; on the list","items":[{"id":"list-n-1","s":"I made a shopping ___.","a":"list","form":"base","cue":"リスト"}]},{"id":"list-v","pos":"verb","gloss":"（一覧に）載せる・挙げる","pattern":"be listed on/in; list three things","items":[{"id":"list-v-1","s":"All the prices are ___ on the menu.","a":"listed","form":"past participle","cue":"載っている"}]}]},{"order":25,"rank":524,"lemma":"wish","senses":[{"id":"wish-v-unreal","pos":"verb","gloss":"〜ならいいのにと思う","pattern":"I wish + past (could/had/were)","items":[{"id":"wish-v-unreal-1","s":"I ___ I could speak English well.","a":"wish","form":"base","cue":"（〜できたら）いいのに"}]},{"id":"wish-v-hope","pos":"verb","gloss":"（幸運などを）祈る","pattern":"wish someone luck / the best","items":[{"id":"wish-v-hope-1","s":"I ___ you good luck.","a":"wish","form":"base","cue":"祈る"}]},{"id":"wish-n","pos":"noun","gloss":"願い","pattern":"make a wish; your wish came true; best wishes","items":[{"id":"wish-n-1","s":"Close your eyes and make a ___.","a":"wish","form":"base","cue":"願い事"}]}]},{"order":26,"rank":526,"lemma":"wear","senses":[{"id":"wear-v","pos":"verb","gloss":"着る・身につける","pattern":"wear a dress/glasses/a uniform","items":[{"id":"wear-v-1","s":"She is ___ a red dress today.","a":"wearing","form":"-ing","cue":"着ている"}]}]},{"order":27,"rank":527,"lemma":"fund","senses":[{"id":"fund-n","pos":"noun","gloss":"資金・基金","pattern":"raise funds; a fund for","items":[{"id":"fund-n-1","s":"The school is raising ___ for a new library.","a":"funds","form":"plural","cue":"資金"}]},{"id":"fund-v","pos":"verb","gloss":"資金を出す","pattern":"be funded by; fund research","items":[{"id":"fund-v-1","s":"The project is ___ by the government.","a":"funded","form":"past participle","cue":"資金提供されている"}]}]},{"order":28,"rank":528,"lemma":"rest","senses":[{"id":"rest-n-remainder","pos":"noun","gloss":"残り","pattern":"the rest of","items":[{"id":"rest-n-remainder-1","s":"I will finish the ___ of my homework tonight.","a":"rest","form":"base","cue":"残り"}]},{"id":"rest-relax","pos":"noun/verb","gloss":"休み・休む","pattern":"take a rest; need to rest","items":[{"id":"rest-relax-1","s":"You look tired. Take a ___.","a":"rest","form":"base","cue":"休憩"}]}]},{"order":29,"rank":529,"lemma":"kid","senses":[{"id":"kid-n","pos":"noun","gloss":"子ども","pattern":"kids (66%); when I was a kid","items":[{"id":"kid-n-1","s":"The ___ are playing outside.","a":"kids","form":"plural","cue":"子どもたち（くだけた言い方）"}]}]},{"order":30,"rank":530,"lemma":"industry","senses":[{"id":"industry-n","pos":"noun","gloss":"産業・業界","pattern":"the music/car industry","items":[{"id":"industry-n-1","s":"He works in the music ___.","a":"industry","form":"base","cue":"業界"}]}]},{"order":31,"rank":531,"lemma":"education","senses":[{"id":"education-n","pos":"noun","gloss":"教育","pattern":"a good education; higher education","items":[{"id":"education-n-1","s":"Everyone has the right to an ___.","a":"education","form":"base","cue":"教育"}]}]},{"order":32,"rank":532,"lemma":"measure","senses":[{"id":"measure-v","pos":"verb","gloss":"測る","pattern":"measure size/height; how do you measure","items":[{"id":"measure-v-1","s":"Please ___ the size of the window.","a":"measure","form":"base","cue":"測って"}]},{"id":"measure-n","pos":"noun","gloss":"対策・措置","pattern":"take measures; safety/security measures","items":[{"id":"measure-n-1","s":"The city took new ___ to stop crime.","a":"measures","form":"plural","cue":"対策"}]}]},{"order":33,"rank":533,"lemma":"kill","senses":[{"id":"kill-v","pos":"verb","gloss":"殺す・命を奪う","pattern":"be killed in; kill time","items":[{"id":"kill-v-1","s":"Thousands of people were ___ in the war.","a":"killed","form":"past participle","cue":"命を奪われた"}]}]},{"order":34,"rank":534,"lemma":"serve","senses":[{"id":"serve-v-food","pos":"verb","gloss":"（料理を）出す","pattern":"serve food/dinner; be served","items":[{"id":"serve-v-food-1","s":"Dinner is ___ at seven.","a":"served","form":"past participle","cue":"出される"}]},{"id":"serve-v-work","pos":"verb","gloss":"務める・尽くす","pattern":"serve as; serve in the army; serve the people","items":[{"id":"serve-v-work-1","s":"He ___ in the army for four years.","a":"served","form":"past","cue":"勤めた"}]}]},{"order":35,"rank":535,"lemma":"likely","senses":[{"id":"likely-adj","pos":"adjective","gloss":"〜しそうな","pattern":"be likely to; more likely to","items":[{"id":"likely-adj-1","s":"It is ___ to rain this afternoon.","a":"likely","form":"base","cue":"（〜し）そう"}]},{"id":"likely-adv","pos":"adverb","gloss":"おそらく","pattern":"most likely; very likely","items":[{"id":"likely-adv-1","s":"She will most ___ be late again.","a":"likely","form":"base","cue":"おそらく"}]}]},{"order":36,"rank":536,"lemma":"certainly","senses":[{"id":"certainly-adv","pos":"adverb","gloss":"確かに・必ず","pattern":"certainly + verb; almost certainly","items":[{"id":"certainly-adv-1","s":"She is ___ the best student in our class.","a":"certainly","form":"base","cue":"確かに"}]}]},{"order":37,"rank":537,"lemma":"national","senses":[{"id":"national-adj","pos":"adjective","gloss":"国の・全国の","pattern":"national park/team/holiday","items":[{"id":"national-adj-1","s":"We visited a ___ park in Hokkaido.","a":"national","form":"base","cue":"国立（の）"}]}]},{"order":38,"rank":539,"lemma":"teach","senses":[{"id":"teach-v","pos":"verb","gloss":"教える","pattern":"teach someone (how) to; teach at","items":[{"id":"teach-v-1","s":"My mother ___ English at a high school.","a":"teaches","form":"3sg","cue":"教えている"}]}]},{"order":39,"rank":540,"lemma":"field","senses":[{"id":"field-n-ground","pos":"noun","gloss":"野原・畑・競技場","pattern":"on the field; rice fields","items":[{"id":"field-n-ground-1","s":"The kids are playing soccer on the ___.","a":"field","form":"base","cue":"グラウンド"}]},{"id":"field-n-area","pos":"noun","gloss":"分野","pattern":"in the field of; an expert in the field","items":[{"id":"field-n-area-1","s":"She is an expert in her ___.","a":"field","form":"base","cue":"分野"}]}]},{"order":40,"rank":541,"lemma":"security","senses":[{"id":"security-n","pos":"noun","gloss":"警備・安全・セキュリティ","pattern":"airport security; security cameras; call security","items":[{"id":"security-n-1","s":"The airport has strict ___.","a":"security","form":"base","cue":"警備"}]}]},{"order":41,"rank":542,"lemma":"air","senses":[{"id":"air-n","pos":"noun","gloss":"空気・空中","pattern":"fresh air; by air; in the air","items":[{"id":"air-n-1","s":"Let's open the window and get some fresh ___.","a":"air","form":"base","cue":"空気"}]}]},{"order":42,"rank":543,"lemma":"benefit","senses":[{"id":"benefit-n","pos":"noun","gloss":"利点・恩恵","pattern":"health benefits; the benefits of; for someone's benefit","items":[{"id":"benefit-n-1","s":"Exercise has many health ___.","a":"benefits","form":"plural","cue":"効用"}]},{"id":"benefit-v","pos":"verb","gloss":"恩恵を受ける・得をする","pattern":"benefit from","items":[{"id":"benefit-v-1","s":"Everyone will ___ from the new park.","a":"benefit","form":"base","cue":"恩恵を受ける"}]}]},{"order":43,"rank":544,"lemma":"trade","senses":[{"id":"trade-n","pos":"noun","gloss":"貿易・取引","pattern":"trade with; free trade agreement","items":[{"id":"trade-n-1","s":"Japan does a lot of ___ with China.","a":"trade","form":"base","cue":"貿易"}]},{"id":"trade-v","pos":"verb","gloss":"交換する","pattern":"trade places/seats; trade X for Y","items":[{"id":"trade-v-1","s":"Do you want to ___ seats with me?","a":"trade","form":"base","cue":"交換する"}]}]},{"order":44,"rank":545,"lemma":"risk","senses":[{"id":"risk-n","pos":"noun","gloss":"危険・リスク","pattern":"the risk of; take risks; at risk","items":[{"id":"risk-n-1","s":"Smoking increases the ___ of heart disease.","a":"risk","form":"base","cue":"危険（性）"}]},{"id":"risk-v","pos":"verb","gloss":"危険を冒す・かける","pattern":"risk your life; risk + -ing","items":[{"id":"risk-v-1","s":"He ___ his life to save the girl.","a":"risked","form":"past","cue":"（命を）かけた"}]}]},{"order":45,"rank":546,"lemma":"news","senses":[{"id":"news-n","pos":"noun","gloss":"ニュース・知らせ","pattern":"good/bad news; hear the news; watch the news","items":[{"id":"news-n-1","s":"Did you hear the ___?","a":"news","form":"base","cue":"知らせ"}]}]},{"order":46,"rank":547,"lemma":"standard","senses":[{"id":"standard-n","pos":"noun","gloss":"基準・水準","pattern":"high standards; meet standards; by any standard","items":[{"id":"standard-n-1","s":"This school has high ___.","a":"standards","form":"plural","cue":"水準"}]},{"id":"standard-adj","pos":"adjective","gloss":"標準の・普通の","pattern":"a standard room/size; standard practice","items":[{"id":"standard-adj-1","s":"We booked a ___ room with one bed.","a":"standard","form":"base","cue":"標準（の）"}]}]},{"order":47,"rank":548,"lemma":"vote","senses":[{"id":"vote-v","pos":"verb","gloss":"投票する","pattern":"vote for; vote in elections","items":[{"id":"vote-v-1","s":"Who did you ___ for?","a":"vote","form":"base","cue":"投票した"}]},{"id":"vote-n","pos":"noun","gloss":"票・投票","pattern":"percent of the vote; count the votes; take a vote","items":[{"id":"vote-n-1","s":"She won 60 percent of the ___.","a":"vote","form":"base","cue":"票"}]}]},{"order":48,"rank":549,"lemma":"percent","senses":[{"id":"percent-n","pos":"noun","gloss":"パーセント","pattern":"number + percent (of)","items":[{"id":"percent-n-1","s":"About 30 ___ of the students live alone.","a":"percent","form":"base","cue":"パーセント"}]}]},{"order":49,"rank":550,"lemma":"focus","senses":[{"id":"focus-v","pos":"verb","gloss":"集中する・重点を置く","pattern":"focus on","items":[{"id":"focus-v-1","s":"Please ___ on your work.","a":"focus","form":"base","cue":"集中して"}]},{"id":"focus-n","pos":"noun","gloss":"重点・集中","pattern":"the main focus of; lose focus","items":[{"id":"focus-n-1","s":"The main ___ of this class is grammar.","a":"focus","form":"base","cue":"重点"}]}]},{"order":50,"rank":551,"lemma":"stage","senses":[{"id":"stage-n-theater","pos":"noun","gloss":"舞台・ステージ","pattern":"on stage; walk onto the stage","items":[{"id":"stage-n-theater-1","s":"The singer walked onto the ___.","a":"stage","form":"base","cue":"舞台"}]},{"id":"stage-n-phase","pos":"noun","gloss":"段階","pattern":"in the early stages; at this stage","items":[{"id":"stage-n-phase-1","s":"The plan is still in the early ___.","a":"stages","form":"plural","cue":"段階"}]}]}];
+const ID_WORDS = ["river","garden","window","music","paper","island","winter","table","forest","letter","morning","bridge",
+  "circle","season","market","silver","village","summer","picture","mountain","ocean","flower","station","pencil",
+  "orange","camera","rabbit","dinner","bottle","cloud","planet","engine","library","holiday","kitchen","harbor"];
+
+/* ---------- Helpers ---------- */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const norm = (s) => s.trim().toLowerCase().replace(/[‘’]/g, "'");
+const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+/* The first letter of the answer is shown in the blank and pre-typed in the answer box. */
+const SHOW_FIRST_LETTER = true;
+const hintOf = (a) => SHOW_FIRST_LETTER ? a.charAt(0).toLowerCase() : "";
+function sentenceHTML(s, fill, cls, hint) {
+  const parts = s.split("___");
+  let mid;
+  if (fill == null) {
+    let h = hint || "";
+    if (h && !parts[0].trim()) h = h.toUpperCase();
+    mid = `<span class="blank" aria-label="blank${h ? ", starts with " + esc(h) : ""}">${h ? '<span class="hint">' + esc(h) + '</span>' : "&nbsp;"}</span>`;
+  } else {
+    mid = `<span class="${cls}">${esc(fill)}</span>`;
+  }
+  return esc(parts[0]) + mid + esc(parts[1] || "");
+}
+const weeks = Math.ceil(BANK.length / WORDS_PER_WEEK);
+const rangeFor = (from, to) => BANK.filter((h) => h.order >= from && h.order <= to);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+/* ---------- Crescent moon progress ----------
+   A meaning counts as learned once the student answers it correctly in practice (kept on this device only).
+   The moon starts as a thin waxing crescent and fills to a full moon when every meaning in the selected set is learned. */
+const learned = (() => { try { return new Set(JSON.parse(store.get("crescent.learned") || "[]")); } catch (e) { return new Set(); } })();
+function markLearned(senseId) {
+  if (learned.has(senseId)) return;
+  learned.add(senseId);
+  store.set("crescent.learned", JSON.stringify([...learned]));
+  updateMoon();
+}
+function moonPath(frac) {
+  const r = 20;
+  const k = 0.12 + 0.88 * Math.max(0, Math.min(1, frac));   /* lit fraction of the disk */
+  const rx = (r * Math.abs(1 - 2 * k)).toFixed(2);
+  const sweep = k > 0.5 ? 1 : 0;                            /* terminator bulges left (gibbous) or right (crescent) */
+  return `M0,-${r} A${r},${r} 0 0 1 0,${r} A${rx},${r} 0 0 ${sweep} 0,-${r}Z`;
+}
+function currentSetOption() {
+  const el = document.querySelector('input[name="p-set"]:checked');
+  return setOptions.find((o) => o.key === (el ? el.value : "w1")) || setOptions[0];
+}
+function updateMoon() {
+  const o = currentSetOption();
+  const ids = [];
+  rangeFor(o.from, o.to).forEach((h) => h.senses.forEach((s) => ids.push(s.id)));
+  const n = ids.filter((id) => learned.has(id)).length;
+  const frac = ids.length ? n / ids.length : 0;
+  $("#moon-lit").setAttribute("d", moonPath(frac));
+  $("#moon").classList.toggle("full", ids.length > 0 && n === ids.length);
+  $("#moon-caption").textContent = `${o.title}: ${n} of ${ids.length} meanings learned`;
+}
+
+/* ---------- Tabs ---------- */
+function showTab(name) {
+  const practice = name === "practice";
+  $("#tab-practice").setAttribute("aria-selected", practice);
+  $("#tab-quiz").setAttribute("aria-selected", !practice);
+  $("#view-practice").hidden = !practice;
+  $("#view-quiz").hidden = practice;
+  if (practice && quiz.running) abandonQuiz();
+  if (!practice && prac.state !== "idle") finishPractice();
+}
+$("#tab-practice").addEventListener("click", () => showTab("practice"));
+$("#tab-quiz").addEventListener("click", () => showTab("quiz"));
+
+/* ---------- Practice ---------- */
+const setOptions = [];
+for (let w = 1; w <= weeks; w++) {
+  const from = (w - 1) * WORDS_PER_WEEK + 1, to = Math.min(w * WORDS_PER_WEEK, BANK.length);
+  setOptions.push({ key: "w" + w, title: `Week ${w}`, detail: `NGSL ${BANK[from - 1].rank}–${BANK[to - 1].rank}`, from, to });
+}
+setOptions.push({ key: "all", title: "Whole quiz range", detail: `NGSL ${BANK[0].rank}–${BANK[BANK.length - 1].rank}`, from: 1, to: BANK.length });
+const savedSet = store.get("practiceSet") || "w1";
+$("#p-sets").innerHTML = setOptions.map((o) => {
+  const senses = rangeFor(o.from, o.to).reduce((n, h) => n + h.senses.length, 0);
+  return `<label class="set-option"><input type="radio" name="p-set" id="p-set-${o.key}" value="${o.key}" ${o.key === savedSet ? "checked" : ""}>
+    <span><strong>${o.title}</strong><span class="muted small">${o.detail} · ${senses} meanings</span></span></label>`;
+}).join("");
+if (!document.querySelector('input[name="p-set"]:checked')) document.querySelector('input[name="p-set"]').checked = true;
+document.querySelectorAll('input[name="p-set"]').forEach((r) => r.addEventListener("change", updateMoon));
+updateMoon();
+
+const prac = { queue: [], total: 0, done: 0, firstTry: 0, missed: new Set(), current: null, state: "idle", timer: null };
+
+function startPractice(units) {
+  prac.queue = shuffle(units).map((u) => ({ ...u, used: new Set(), attempts: 0 }));
+  prac.total = prac.queue.length; prac.done = 0; prac.firstTry = 0; prac.missed = new Set();
+  $("#p-setup").hidden = true; $("#p-done").hidden = true; $("#p-run").hidden = false;
+  nextPractice();
+}
+function unitsFor(from, to) {
+  const out = [];
+  rangeFor(from, to).forEach((h) => h.senses.forEach((s) => out.push({ lemma: h.lemma, sense: s })));
+  return out;
+}
+$("#p-start").addEventListener("click", () => {
+  const key = document.querySelector('input[name="p-set"]:checked').value;
+  store.set("practiceSet", key);
+  const o = setOptions.find((x) => x.key === key);
+  startPractice(unitsFor(o.from, o.to));
+});
+
+function nextPractice() {
+  clearTimeout(prac.timer);
+  if (!prac.queue.length) return finishPractice();
+  const u = prac.queue.shift();
+  let pool = u.sense.items.filter((it) => !u.used.has(it.id));
+  if (!pool.length) { u.used = new Set([u.lastId]); pool = u.sense.items.filter((it) => it.id !== u.lastId); if (!pool.length) pool = u.sense.items; }
+  const item = pick(pool);
+  u.used.add(item.id); u.lastId = item.id;
+  prac.current = { unit: u, item };
+  prac.state = "answering";
+  $("#p-recycle").hidden = u.attempts === 0;
+  $("#p-sentence").innerHTML = sentenceHTML(item.s, null, null, hintOf(item.a));
+  $("#p-cue").textContent = item.cue;
+  const input = $("#p-input");
+  input.value = hintOf(item.a); input.readOnly = false;
+  $("#p-check").textContent = "Check";
+  $("#p-feedback").hidden = true;
+  updatePracticeMeta();
+  input.focus();
+  try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+  startPracticeTimer();
+}
+function updatePracticeMeta() {
+  $("#p-count").textContent = `${prac.done} of ${prac.total} meanings learned`;
+  $("#p-missed").textContent = prac.missed.size ? `${prac.missed.size} to review` : "";
+  $("#p-bar").style.width = (prac.total ? (prac.done / prac.total) * 100 : 0) + "%";
+}
+$("#p-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (prac.state === "feedback") {
+    if (performance.now() - prac.feedbackAt < 600) return;
+    return nextPractice();
+  }
+  if (prac.state !== "answering") return;
+  const input = $("#p-input");
+  const typed = input.value;
+  if (!typed.trim() || norm(typed) === hintOf(prac.current.item.a)) { input.focus(); return; }
+  stopPracticeTimer();
+  const { unit, item } = prac.current;
+  const fb = $("#p-feedback");
+  input.readOnly = true;
+  if (norm(typed) === norm(item.a)) {
+    if (unit.attempts === 0) prac.firstTry++;
+    prac.done++;
+    prac.state = "correct";
+    markLearned(unit.sense.id);
+    fb.className = "feedback ok"; fb.hidden = false;
+    $("#p-sentence").innerHTML = sentenceHTML(item.s, item.a, "fill-ok");
+    fb.innerHTML = "<span>Correct</span>";
+    updatePracticeMeta();
+    prac.timer = setTimeout(nextPractice, 900);
+  } else {
+    showMiss(unit, item, `Not quite. You typed “${esc(typed.trim())}”.`);
+  }
+});
+/* A miss keeps the same item on screen with the answer filled in. The timer is paused, and the next item
+   appears only after a deliberate Continue or Enter (presses in the first 0.6 s are ignored so a double Enter cannot skip it). */
+function showMiss(unit, item, verdict) {
+  unit.attempts++;
+  prac.missed.add(unit.sense.id);
+  prac.queue.splice(Math.min(3, prac.queue.length), 0, unit);
+  prac.state = "feedback";
+  prac.feedbackAt = performance.now();
+  $("#p-sentence").innerHTML = sentenceHTML(item.s, item.a, "fill-ok");
+  const fb = $("#p-feedback");
+  fb.className = "feedback bad"; fb.hidden = false;
+  fb.innerHTML = `<span class="verdict">${verdict}</span>
+    <span class="small muted">The correct answer is shown in green. This word will come back later with a different sentence. Press Continue or Enter when you are ready.</span>`;
+  $("#p-clock").textContent = "Paused";
+  $("#p-clock").classList.remove("low"); $("#p-clock").classList.add("paused");
+  $("#p-timerbar").classList.add("paused");
+  const btn = $("#p-check");
+  btn.textContent = "Continue";
+  $("#p-input").blur();
+  try { btn.focus({ preventScroll: true }); } catch (e) { btn.focus(); }
+  fb.scrollIntoView({ block: "nearest" });
+  updatePracticeMeta();
+}
+/* Ignore Enter presses that only confirm Japanese IME input or auto-repeat. */
+$("#p-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.isComposing || e.keyCode === 229 || e.repeat)) e.preventDefault();
+});
+function startPracticeTimer() {
+  prac.start = performance.now();
+  $("#p-timerbar").classList.remove("paused");
+  $("#p-clock").classList.remove("paused");
+  clearInterval(prac.tick);
+  tickPractice();
+  prac.tick = setInterval(tickPractice, 100);
+}
+function stopPracticeTimer() { clearInterval(prac.tick); }
+function tickPractice() {
+  const limit = TIME_LIMIT * 1000;
+  const left = Math.max(0, limit - (performance.now() - prac.start));
+  $("#p-timer").style.width = (left / limit) * 100 + "%";
+  $("#p-clock").innerHTML = Math.ceil(left / 1000) + "<small>s left</small>";
+  $("#p-timerbar").classList.toggle("low", left < 3000);
+  $("#p-clock").classList.toggle("low", left < 3000);
+  if (left <= 0) { stopPracticeTimer(); practiceTimeout(); }
+}
+/* Time ran out: grade whatever was typed; if nothing was typed, count it as a miss and recycle the meaning. */
+function practiceTimeout() {
+  if (prac.state !== "answering") return;
+  const input = $("#p-input");
+  if (input.value.trim() && norm(input.value) !== hintOf(prac.current.item.a)) { $("#p-form").requestSubmit(); return; }
+  const { unit, item } = prac.current;
+  input.readOnly = true;
+  showMiss(unit, item, "Time ran out.");
+}
+$("#p-quit").addEventListener("click", finishPractice);
+function finishPractice() {
+  clearTimeout(prac.timer);
+  stopPracticeTimer();
+  prac.state = "idle";
+  $("#p-run").hidden = true; $("#p-done").hidden = false;
+  $("#p-score").textContent = `${prac.firstTry} / ${prac.total}`;
+  $("#p-score-note").textContent = prac.done < prac.total
+    ? `Correct on the first try. You ended early with ${prac.total - prac.done} meanings left.`
+    : `Correct on the first try. ${prac.missed.size ? prac.missed.size + " meanings needed another attempt." : "No meanings needed another attempt."}`;
+  $("#p-again-missed").hidden = prac.missed.size === 0;
+}
+$("#p-again").addEventListener("click", () => { $("#p-done").hidden = true; $("#p-setup").hidden = false; });
+$("#p-again-missed").addEventListener("click", () => {
+  const units = [];
+  BANK.forEach((h) => h.senses.forEach((s) => { if (prac.missed.has(s.id)) units.push({ lemma: h.lemma, sense: s }); }));
+  startPractice(units);
+});
+
+/* ---------- Quiz preview ---------- */
+const quiz = { running: false, items: [], i: 0, typed: "", start: 0, tick: null, settings: null, id: "", results: [] };
+$("#q-week").innerHTML = Array.from({ length: weeks }, (_, k) => {
+  const w = k + 1, to = Math.min(w * WORDS_PER_WEEK, BANK.length);
+  return `<option value="${w}">Week ${w} (NGSL ${BANK[0].rank}–${BANK[to - 1].rank})</option>`;
+}).join("");
+function newIdentifier() {
+  return shuffle(ID_WORDS).slice(0, 4).join("-");
+}
+$("#q-time").value = TIME_LIMIT;
+quiz.id = newIdentifier();
+$("#q-id").textContent = quiz.id;
+$("#q-newid").addEventListener("click", () => { quiz.id = newIdentifier(); $("#q-id").textContent = quiz.id; });
+
+function readSettings() {
+  const clamp = (v, lo, hi, d) => { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(lo, Math.min(hi, v)); };
+  return {
+    week: parseInt($("#q-week").value, 10),
+    n: clamp($("#q-n").value, 1, 20, 5),
+    reviewPct: parseInt($("#q-review").value, 10),
+    time: clamp($("#q-time").value, 3, 60, 10),
+    kbd: document.querySelector('input[name="q-kbd"]:checked').value
+  };
+}
+/* Pool logic: one item per headword; ~80/20 current/review; week 1 uses only its own words; shortfalls are filled from the other pool, then the quiz is shortened. */
+function planQuiz(st) {
+  const curFrom = (st.week - 1) * WORDS_PER_WEEK + 1, curTo = Math.min(st.week * WORDS_PER_WEEK, BANK.length);
+  const cur = rangeFor(curFrom, curTo), prev = rangeFor(1, curFrom - 1);
+  const notes = [];
+  let nReview = st.week === 1 ? 0 : Math.round(st.n * st.reviewPct / 100);
+  let nNew = st.n - nReview;
+  if (nNew > cur.length) {
+    const extra = nNew - cur.length; nNew = cur.length;
+    const add = Math.min(extra, prev.length - nReview); if (add > 0) nReview += add;
+    notes.push(`Only ${cur.length} current-week words exist, so more review words were used.`);
+  }
+  if (nReview > prev.length) {
+    const extra = nReview - prev.length; nReview = prev.length;
+    const add = Math.min(extra, cur.length - nNew); if (add > 0) nNew += add;
+    notes.push(`Only ${prev.length} earlier words exist, so more current-week words were used.`);
+  }
+  const total = nNew + nReview;
+  if (total < st.n) notes.push(`The word pool has ${total} words, so this quiz has ${total} questions instead of ${st.n}.`);
+  return { cur, prev, nNew, nReview, total, notes };
+}
+function updateSummary() {
+  const st = readSettings(), p = planQuiz(st);
+  $("#q-review").disabled = st.week === 1;
+  const reviewText = st.week === 1 ? "Week 1 uses only its own words." : `${p.nNew} current-week + ${p.nReview} review words.`;
+  $("#q-summary").innerHTML = `<strong>${p.total} questions</strong> · ${reviewText} ${st.time} s each, ${st.kbd === "restricted" ? "restricted" : "full"} keyboard.`
+    + p.notes.map((n) => `<span class="warn">${esc(n)}</span>`).join("");
+}
+["#q-week", "#q-n", "#q-review", "#q-time"].forEach((s) => $(s).addEventListener("input", updateSummary));
+document.querySelectorAll('input[name="q-kbd"]').forEach((r) => r.addEventListener("change", updateSummary));
+updateSummary();
+
+$("#q-start").addEventListener("click", () => {
+  const st = readSettings(), p = planQuiz(st);
+  const words = shuffle([...shuffle(p.cur).slice(0, p.nNew).map((h) => ({ h, pool: "current" })),
+                         ...shuffle(p.prev).slice(0, p.nReview).map((h) => ({ h, pool: "review" }))]);
+  quiz.items = words.map(({ h, pool }) => { const sense = pick(h.senses); return { lemma: h.lemma, sense, item: pick(sense.items), pool }; });
+  quiz.settings = st; quiz.i = 0; quiz.results = []; quiz.running = true;
+  quiz.session = "PREVIEW-" + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+  $("#q-setup").hidden = true; $("#q-done").hidden = true; $("#q-run").hidden = false;
+  const restricted = st.kbd === "restricted";
+  $("#q-kbd-wrap").hidden = !restricted; $("#q-display").hidden = !restricted; $("#q-form").hidden = restricted;
+  showQuizItem();
+});
+
+function buildKeyboard(answer) {
+  const letters = new Set(answer.toLowerCase().replace(/[^a-z]/g, "").split(""));
+  const specials = [...new Set(answer.replace(/[a-zA-Z]/g, "").split(""))];
+  const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+  let html = rows.map((r, idx) => `<div class="kbd-row">${r.split("").map((ch) =>
+    letters.has(ch) ? `<button class="key" type="button" data-k="${ch}">${ch}</button>`
+                    : `<button class="key" type="button" disabled aria-hidden="true" tabindex="-1"></button>`).join("")}
+    ${idx === 2 ? '<button class="key wide" type="button" data-k="back" aria-label="Delete">⌫</button>' : ""}</div>`).join("");
+  if (specials.length) html += `<div class="kbd-row">${specials.map((c) =>
+    `<button class="key wide" type="button" data-k="${esc(c)}">${c === " " ? "space" : esc(c)}</button>`).join("")}</div>`;
+  $("#q-kbd").innerHTML = html;
+  quiz.allowed = new Set([...letters, ...specials]);
+}
+function renderDisplay() {
+  $("#q-display").innerHTML = esc(quiz.typed) + '<span class="caret"></span>';
+}
+function pressKey(k) {
+  if (!quiz.running) return;
+  if (k === "back") quiz.typed = quiz.typed.slice(0, -1);
+  else if (quiz.allowed.has(k) && quiz.typed.length < 30) quiz.typed += k;
+  renderDisplay();
+}
+$("#q-kbd").addEventListener("pointerdown", (e) => {
+  const b = e.target.closest(".key"); if (!b || b.disabled) return;
+  e.preventDefault(); pressKey(b.dataset.k);
+});
+$("#q-kbd").addEventListener("keydown", (e) => {
+  const b = e.target.closest(".key");
+  if (b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pressKey(b.dataset.k); }
+});
+document.addEventListener("keydown", (e) => {
+  if (!quiz.running || quiz.settings.kbd !== "restricted") return;
+  if (e.target.closest && e.target.closest(".key")) return;
+  if (e.key === "Backspace") { e.preventDefault(); pressKey("back"); }
+  else if (e.key === "Enter") { e.preventDefault(); advanceQuiz(false); }
+  else if (e.key.length === 1) { const k = e.key.toLowerCase(); if (quiz.allowed.has(k)) { e.preventDefault(); pressKey(k); } }
+});
+$("#q-form").addEventListener("submit", (e) => { e.preventDefault(); advanceQuiz(false); });
+$("#q-next").addEventListener("click", () => advanceQuiz(false));
+
+function showQuizItem() {
+  const q = quiz.items[quiz.i], st = quiz.settings;
+  $("#q-count").textContent = `Question ${quiz.i + 1} of ${quiz.items.length}`;
+  $("#q-sentence").innerHTML = sentenceHTML(q.item.s, null, null, hintOf(q.item.a));
+  $("#q-cue").textContent = q.item.cue;
+  $("#q-next").textContent = quiz.i === quiz.items.length - 1 ? "Submit quiz" : "Next";
+  quiz.typed = hintOf(q.item.a);
+  if (st.kbd === "restricted") { buildKeyboard(q.item.a); renderDisplay(); }
+  else {
+    const inp = $("#q-input"); inp.value = hintOf(q.item.a); inp.focus();
+    try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {}
+  }
+  quiz.start = performance.now();
+  clearInterval(quiz.tick);
+  updateTimer();
+  quiz.tick = setInterval(updateTimer, 100);
+}
+function updateTimer() {
+  const limit = quiz.settings.time * 1000;
+  const left = Math.max(0, limit - (performance.now() - quiz.start));
+  $("#q-timer").style.width = (left / limit) * 100 + "%";
+  $("#q-clock").innerHTML = Math.ceil(left / 1000) + "<small>s left</small>";
+  $("#q-timerbar").classList.toggle("low", left < 3000);
+  $("#q-clock").classList.toggle("low", left < 3000);
+  if (left <= 0) advanceQuiz(true);
+}
+function advanceQuiz(timedOut) {
+  if (!quiz.running) return;
+  clearInterval(quiz.tick);
+  const q = quiz.items[quiz.i];
+  const response = quiz.settings.kbd === "restricted" ? quiz.typed : $("#q-input").value;
+  const used = Math.min(quiz.settings.time, (performance.now() - quiz.start) / 1000);
+  let resp = response.trim();
+  if (resp && norm(resp) === hintOf(q.item.a)) resp = "";   /* only the given first letter counts as no answer */
+  quiz.results.push({ q, response: resp, correct: norm(resp) === norm(q.item.a), used, timedOut });
+  quiz.i++;
+  if (quiz.i < quiz.items.length) showQuizItem(); else finishQuiz();
+}
+function abandonQuiz() {
+  clearInterval(quiz.tick); quiz.running = false;
+  $("#q-run").hidden = true; $("#q-done").hidden = true; $("#q-setup").hidden = false;
+}
+function csvCell(v) { const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function finishQuiz() {
+  quiz.running = false;
+  const st = quiz.settings, r = quiz.results;
+  const right = r.filter((x) => x.correct).length;
+  $("#q-run").hidden = true; $("#q-done").hidden = false;
+  $("#q-score").textContent = `${right} / ${r.length}`;
+  const timeouts = r.filter((x) => x.timedOut).length;
+  $("#q-score-note").textContent = `${quiz.id} · ${st.kbd === "restricted" ? "Restricted" : "Full"} keyboard · ${st.time} s per question${timeouts ? ` · ${timeouts} timed out` : ""}`;
+  $("#q-review-list").innerHTML = r.map((x) => `<li>
+      <span class="mark ${x.correct ? "ok" : "bad"}">${x.correct ? "Correct" : x.timedOut && !x.response ? "No answer (time ran out)" : "Incorrect"}</span>
+      <span>${sentenceHTML(x.q.item.s, x.q.item.a, x.correct ? "fill-ok" : "fill-bad")}</span>
+      ${x.correct ? "" : `<span class="small muted">Your answer: ${x.response ? "“" + esc(x.response) + "”" : "none"}</span>`}
+    </li>`).join("");
+  const header = ["identifier","session","item_order","headword","sense_id","item_id","pool","required_answer","response","correct","keyboard","time_limit_s","time_used_s","timed_out"];
+  const rows = r.map((x, i) => [quiz.id, quiz.session, i + 1, x.q.lemma, x.q.sense.id, x.q.item.id, x.q.pool, x.q.item.a,
+    x.response, x.correct ? 1 : 0, st.kbd, st.time, x.used.toFixed(1), x.timedOut ? 1 : 0]);
+  $("#q-csv").value = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+}
+$("#q-copy").addEventListener("click", async () => {
+  const ta = $("#q-csv"), btn = $("#q-copy");
+  try { await navigator.clipboard.writeText(ta.value); btn.textContent = "Copied"; }
+  catch (e) { ta.focus(); ta.select(); btn.textContent = "Selected, press Ctrl/⌘+C"; }
+  setTimeout(() => { btn.textContent = "Copy CSV"; }, 2000);
+});
+$("#q-again").addEventListener("click", () => { $("#q-done").hidden = true; $("#q-setup").hidden = false; updateSummary(); });
+</script>
