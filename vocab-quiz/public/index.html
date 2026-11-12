@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>単語クイズ</title>
+<style>body{font-family:system-ui,"Hiragino Sans",sans-serif;max-width:520px;margin:15vh auto;padding:0 20px;color:#1d2433}input{font-size:1.4rem;padding:10px;width:100%;text-transform:uppercase;letter-spacing:.1em;border:1px solid #d9dee7;border-radius:10px;box-sizing:border-box}button{margin-top:12px;width:100%;padding:12px;font-size:1.1rem;border:0;border-radius:10px;background:#2457c5;color:#fff}</style></head>
+<body><h1>単語クイズ</h1><p>QRコードを読み取るか、スクリーンのコードを入力してください。</p>
+<input id="c" maxlength="6" autocomplete="off" autocapitalize="characters"><button onclick="location.href='/j/'+encodeURIComponent(document.getElementById('c').value.trim())">参加する</button></body></html>

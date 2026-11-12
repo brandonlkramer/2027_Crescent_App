@@ -1,0 +1,21 @@
+{
+  "name": "vocab-quiz",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute vocab-quiz --remote --file schema.sql",
+    "setup": "node setup.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "wrangler": "^4.160.0"
+  },
+  "dependencies": {
+    "qrcode-generator": "^1.4.4"
+  },
+  "private": true
+}

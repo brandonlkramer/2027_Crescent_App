@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vocab Quiz — Admin</title>
+<style>
+  :root { --ink:#1d2433; --muted:#6b7280; --line:#d9dee7; --accent:#2457c5; --bad:#c62828; --ok:#1a7f4b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Hiragino Sans", sans-serif; color:var(--ink); background:#f6f7fb; }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:12px 20px; display:flex; gap:16px; align-items:center; }
+  header h1 { font-size:1.1rem; margin:0 12px 0 0; }
+  nav button { background:none; border:0; padding:8px 10px; font:inherit; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+  nav button.on { color:var(--ink); border-color:var(--accent); font-weight:600; }
+  main { max-width: 1000px; margin: 0 auto; padding: 20px; }
+  section.card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px; }
+  h2 { font-size:1.05rem; margin:0 0 12px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+  label { font-size:.85rem; color:var(--muted); display:block; margin-bottom:4px; }
+  input, select { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; width:100%; background:#fff; }
+  button.btn { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.sec { background:#fff; color:var(--accent); }
+  button.danger { background:#fff; color:var(--bad); border-color:var(--bad); }
+  table { width:100%; border-collapse:collapse; font-size:.92rem; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--muted); font-weight:600; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .msg { margin-top:10px; font-size:.92rem; white-space:pre-wrap; }
+  .msg.err { color:var(--bad); } .msg.ok { color:var(--ok); }
+  .muted { color:var(--muted); font-size:.88rem; }
+  .pill { font-size:.8rem; padding:2px 8px; border-radius:20px; background:#eef2ff; }
+  .pill.closed { background:#eceef3; color:var(--muted); }
+  #qrScreen { position:fixed; inset:0; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; z-index:10; }
+  #qrScreen .big { font-size:min(9vw, 72px); font-weight:800; letter-spacing:.12em; }
+  #qrScreen .live { font-size:1.6rem; color:var(--muted); }
+  #qrBox svg { width:min(60vh, 80vw); height:auto; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div id="login" style="max-width:380px;margin:12vh auto;background:#fff;border:1px solid #d9dee7;border-radius:12px;padding:22px">
+  <h2>Administrator key</h2>
+  <input id="keyInput" type="password" autocomplete="current-password">
+  <div class="row" style="margin-top:12px"><button class="btn" id="loginBtn">Sign in</button></div>
+  <div id="loginMsg" class="msg err"></div>
+  <p class="muted">The key is kept only in this browser tab.</p>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <h1>Vocab Quiz Admin</h1>
+  <nav id="tabs">
+    <button data-t="sessions" class="on">Quizzes</button>
+    <button data-t="results">Named results</button>
+    <button data-t="ids">Student IDs</button>
+    <button data-t="items">Item bank</button>
+  </nav>
+</header>
+<main>
+  <!-- QUIZZES -->
+  <div data-p="sessions">
+    <section class="card">
+      <h2>Start a quiz</h2>
+      <div class="grid">
+        <div><label>Week</label><input id="sWeek" type="number" min="1" value="1"></div>
+        <div><label>Items per student</label><input id="sN" type="number" min="1" max="40" value="20"></div>
+        <div><label>Current-week share</label><select id="sRatio"><option value="0.8">80% new / 20% review</option><option value="0.7">70 / 30</option><option value="0.9">90 / 10</option><option value="1">100% new</option><option value="0.5">50 / 50</option></select></div>
+        <div><label>Keyboard</label><select id="sKb"><option value="restricted">Restricted (default)</option><option value="full">Full keyboard</option></select></div>
+        <div><label>Seconds per item</label><input id="sSec" type="number" min="3" max="60" value="10"></div>
+        <div><label>Label (optional)</label><input id="sLabel" placeholder="e.g. BI-15 Tue 2"></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="createBtn">Start and show QR</button></div>
+      <div id="createMsg" class="msg"></div>
+    </section>
+    <section class="card">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">Recent quizzes</h2><button class="btn sec" id="refreshBtn">Refresh</button></div>
+      <p class="muted" id="retNote"></p>
+      <table><thead><tr><th>Code</th><th>Label</th><th>Week</th><th>Keyboard</th><th>Joined / submitted</th><th>Status</th><th></th></tr></thead><tbody id="sessRows"></tbody></table>
+    </section>
+  </div>
+
+  <!-- NAMED RESULTS -->
+  <div data-p="results" class="hidden">
+    <section class="card">
+      <h2>Match results to names (on this computer only)</h2>
+      <p class="muted">Choose your local roster file (CSV with an <b>identifier</b> column, as produced on the Student IDs tab). It is read by this browser and never uploaded. The named file is downloaded to your computer.</p>
+      <div class="grid">
+        <div style="grid-column: span 2"><label>Roster CSV</label><input type="file" id="rosterFile" accept=".csv,text/csv"></div>
+        <div style="grid-column: span 2"><label>Quiz</label><select id="resSession"></select></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="namedBtn">Download named results</button><button class="btn sec" id="namedItemsBtn">Named item-level results</button></div>
+      <div id="namedMsg" class="msg"></div>
+    </section>
+  </div>
+
+  <!-- IDS -->
+  <div data-p="ids" class="hidden">
+    <section class="card">
+      <h2>Create IDs for a class roster</h2>
+      <p class="muted">Choose a roster CSV (any columns, e.g. student number and name). This page assigns each student a new four-word ID, downloads <b>the roster with IDs added</b> (keep it on your computer), and uploads <b>only the IDs</b> with the class label. Students who already have an <code>identifier</code> value keep it.</p>
+      <div class="grid">
+        <div style="grid-column: span 2"><label>Roster CSV</label><input type="file" id="genFile" accept=".csv,text/csv"></div>
+        <div><label>Class label</label><input id="genClass" placeholder="e.g. BI-15"></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="genBtn">Create IDs, download roster, upload IDs</button></div>
+      <div id="genMsg" class="msg"></div>
+    </section>
+    <section class="card">
+      <h2>IDs on the server</h2>
+      <table><thead><tr><th>Class</th><th>IDs</th></tr></thead><tbody id="idRows"></tbody></table>
+      <p class="muted">The server holds only the four-word IDs and class labels, not names.</p>
+    </section>
+  </div>
+
+  <!-- ITEMS -->
+  <div data-p="items" class="hidden">
+    <section class="card">
+      <h2>Load a week of items</h2>
+      <p class="muted">Choose a <code>bank_weekNN.json</code> file from the item pipeline. Loading a week replaces any items already loaded for that week.</p>
+      <div class="grid">
+        <div style="grid-column: span 2"><label>Bank file</label><input type="file" id="bankFile" accept=".json,application/json"></div>
+        <div><label>Week</label><input id="bankWeek" type="number" min="1"></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="bankBtn">Load items</button></div>
+      <div id="bankMsg" class="msg"></div>
+    </section>
+    <section class="card">
+      <h2>Loaded weeks</h2>
+      <table><thead><tr><th>Week</th><th>Headwords</th><th>Senses</th><th>Items</th></tr></thead><tbody id="itemRows"></tbody></table>
+    </section>
+  </div>
+</main>
+</div>
+
+<div id="qrScreen" class="hidden">
+  <div class="big" id="qrCode"></div>
+  <div id="qrBox"></div>
+  <div class="muted" id="qrUrl" style="font-size:1.1rem"></div>
+  <div class="live" id="qrLive"></div>
+  <div class="row"><button class="btn sec" id="qrHide">Hide QR</button><button class="btn danger" id="qrClose">Close quiz</button></div>
+</div>
+
+<script src="/qrcode.js"></script>
+<script src="/admin.js"></script>
+</body>
+</html>

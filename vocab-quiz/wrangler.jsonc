@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vocab-quiz",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/j/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vocab-quiz",
+      // Replace with the database_id printed by: npx wrangler d1 create vocab-quiz
+      "database_id": "ccc4cd94-8330-4113-8bcf-52d42a473edb"
+    }
+  ],
+  // Nightly deletion of results older than 30 days (18:00 UTC = 03:00 JST)
+  "triggers": { "crons": ["0 18 * * *"] },
+  "observability": { "enabled": false }
+}
