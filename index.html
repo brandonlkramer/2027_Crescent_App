@@ -1,7 +1,7 @@
 <title>Crescent</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#2450a8">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-22 -22 44 44'%3E%3Ccircle r='20' fill='%23e5ecf9'/%3E%3Cpath d='M0,-20 A20,20 0 0 1 0,20 A13,20 0 0 0 0,-20Z' fill='%232450a8'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-22 -22 44 44'%3E%3Ccircle r='20' fill='%23eef1f6' stroke='%23b5472b' stroke-width='2'/%3E%3Cpath d='M0,-20 A20,20 0 0 1 0,20 A13,20 0 0 0 0,-20Z' fill='%23f5c518'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -22,6 +22,9 @@
   --bad: #b0352b;
   --bad-soft: #fbe8e5;
   --key: #e9eef5;
+  --moon: #f5c518;       /* crescent yellow */
+  --moon-dark: #eef1f6;  /* unlit part of the moon */
+  --roof: #b5472b;       /* highlight: campus roof-tile red */
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
   --font-body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
   --font-ja: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
@@ -32,12 +35,14 @@
     --paper: #0e1421; --surface: #172034; --ink: #e8edf6; --muted: #9ba7be; --line: #2a3651;
     --accent: #93b2f6; --accent-soft: #1d2b4b; --rule: #6a3633; --ok: #6fd29d; --ok-soft: #15352a;
     --bad: #ff8d81; --bad-soft: #3b1e1c; --key: #222d45; color-scheme: dark;
+    --moon: #ffd23f; --moon-dark: #222d45; --roof: #e0704f;
   }
 }
 :root[data-theme="dark"] {
   --paper: #0e1421; --surface: #172034; --ink: #e8edf6; --muted: #9ba7be; --line: #2a3651;
   --accent: #93b2f6; --accent-soft: #1d2b4b; --rule: #6a3633; --ok: #6fd29d; --ok-soft: #15352a;
   --bad: #ff8d81; --bad-soft: #3b1e1c; --key: #222d45; color-scheme: dark;
+  --moon: #ffd23f; --moon-dark: #222d45; --roof: #e0704f;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -51,9 +56,10 @@ header { display: flex; flex-direction: column; gap: 14px; }
 .brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .brand-name { display: flex; align-items: center; gap: 12px; }
 .moon { width: 44px; height: 44px; flex: none; display: block; }
-.moon .disk { fill: var(--accent-soft); stroke: var(--line); stroke-width: 1; }
-.moon .lit { fill: var(--accent); }
-.moon.full .lit { fill: var(--accent); filter: drop-shadow(0 0 3px var(--accent)); }
+.moon .disk { fill: var(--moon-dark); stroke: var(--roof); stroke-width: 1.5; }
+.moon .lit { fill: var(--moon); }
+.moon.full .disk { stroke-width: 2.5; }
+.moon.full .lit { filter: drop-shadow(0 0 3px var(--roof)); }
 .brand-text { display: flex; flex-direction: column; gap: 1px; }
 h1 { font-family: var(--font-display); font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; line-height: 1.1; }
 .moon-caption { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
