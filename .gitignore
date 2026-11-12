@@ -1,0 +1,8 @@
+# Student rosters and ID files never go into git (anywhere in this repo)
+*roster*.csv
+ids_*.csv
+named_*.csv
+quiz_*.csv
+
+# Files Claude delivers to this computer
+Claude outputs/

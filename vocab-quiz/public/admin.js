@@ -4,21 +4,6 @@
   let sessions = [];
   let liveTimer = null;
 
-  // Friendly, easy-to-spell NGSL content words used to build four-word IDs (about 280 words, so roughly 6 billion combinations)
-  const ID_WORDS = `apple arm baby bag ball bank beach bear bed bell bike bird black blue boat body bone book box bread bridge bright brown
-  bus butter cake camera car card cat chair cheese city class clean clock cloud coat coffee cold cook corner cow cup dance desk
-  dinner dog door dream dress drink duck early earth east egg energy face fall farm fast field film fire fish flag floor flower
-  fly food foot forest fresh friend frog fruit full game garden gift glass gold good grass green guitar hair hand happy hat heart
-  hill home horse hot house ice idea island jacket juice key king kitchen lake lamp leaf light lion long lunch map market milk
-  moon morning mountain mouse music name nature new night north ocean orange page paint paper park party pen pencil pet phone
-  piano picture pink plane plant plate pocket point pool quick quiet rabbit rain red rice river road rock room rose round salt
-  sand school sea seat shirt shoe shop short silver simple sing sky sleep small smile snow soft song soup south space speed
-  spring square star station stone store storm story street strong sugar summer sun sweet table tea teacher tent test tiger
-  time toy train tree trip truck warm watch water wave west wheel white wind window winter wood world yellow young zoo
-  autumn bean boot brush candle chalk cloth coin cotton crown drum engine fan feather fence fork gate glove honey kite ladder
-  lemon letter lock metal nest note nurse onion oven pan pepper pie pillow pipe pizza potato radio ring roof rope ruler sail
-  salad shell ship shower skirt sock spoon stamp tooth towel tower van wall wing`.trim().split(/\s+/);
-
   // ---------- auth ----------
   async function api(path, opts = {}) {
     const r = await fetch("/api/admin" + path, { ...opts, headers: { authorization: "Bearer " + KEY, "content-type": "application/json", ...(opts.headers || {}) } });
@@ -46,7 +31,7 @@
   for (const b of document.querySelectorAll("#tabs button")) b.onclick = () => {
     for (const x of document.querySelectorAll("#tabs button")) x.classList.toggle("on", x === b);
     for (const p of document.querySelectorAll("[data-p]")) p.classList.toggle("hidden", p.dataset.p !== b.dataset.t);
-    if (b.dataset.t === "results") loadSessions();
+    if (b.dataset.t === "sessions") loadIds();
   };
 
   function msg(el, text, kind) { el.textContent = text; el.className = "msg " + (kind || ""); }
@@ -88,7 +73,7 @@
     for (const s of sessions) {
       const tr = document.createElement("tr");
       const date = new Date(s.created_at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
-      tr.innerHTML = `<td><b>${s.code}</b><div class="muted">${date}</div></td><td>${esc(s.label || "")}</td><td>${s.week}</td><td>${s.keyboard}</td>
+      tr.innerHTML = `<td><b>${s.code}</b><div class="muted">${date}</div></td><td>${esc(s.label || "")}<div class="muted">${esc((s.classes || "").split("\n").join(", "))}</div></td><td>${s.week}</td><td>${s.keyboard}</td>
         <td>${s.joined} / ${s.submitted}</td><td><span class="pill ${s.status}">${s.status}</span></td><td class="row"></td>`;
       const cell = tr.lastElementChild;
       if (s.status === "open") { cell.append(btn("QR", () => showQr(s), "sec"), btn("Close", () => closeSession(s.id), "danger")); }
@@ -97,9 +82,6 @@
         btn("Reset a student", () => resetStudent(s), "sec"));
       tb.appendChild(tr);
     }
-    const sel = $("resSession"); const keep = sel.value; sel.innerHTML = "";
-    for (const s of sessions) { const o = document.createElement("option"); o.value = s.id; o.textContent = `${s.code} — week ${s.week} ${s.label ? "— " + s.label : ""} (${s.submitted} submitted)`; sel.appendChild(o); }
-    if (keep) sel.value = keep;
   }
   function btn(text, fn, cls) { const b = document.createElement("button"); b.className = "btn " + (cls || ""); b.textContent = text; b.onclick = fn; return b; }
   function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
@@ -109,7 +91,8 @@
     try {
       const d = await api("/sessions", { method: "POST", body: JSON.stringify({
         week: +$("sWeek").value, n_items: +$("sN").value, new_ratio: +$("sRatio").value,
-        keyboard: $("sKb").value, seconds: +$("sSec").value, label: $("sLabel").value }) });
+        keyboard: $("sKb").value, seconds: +$("sSec").value, label: $("sLabel").value,
+        classes: [...document.querySelectorAll("#sClasses input:checked")].map((x) => x.value) }) });
       msg($("createMsg"), d.warnings.length ? d.warnings.join("\n") : `Started quiz ${d.session.code}.`, d.warnings.length ? "err" : "ok");
       await loadSessions();
       showQr(d.session);
@@ -144,73 +127,52 @@
     download(`quiz_${s.code}_week${String(s.week).padStart(2, "0")}${items ? "_items" : ""}.csv`, await resultsText(s, items));
   }
 
-  // ---------- named results (roster never leaves the browser) ----------
-  async function named(items) {
-    const f = $("rosterFile").files[0];
-    const s = sessions.find((x) => String(x.id) === $("resSession").value);
-    if (!f || !s) { msg($("namedMsg"), "Choose a roster file and a quiz.", "err"); return; }
-    const roster = parseCsv(await readFile(f));
-    const rh = roster[0].map((h) => h.trim().toLowerCase());
-    const idCol = rh.indexOf("identifier");
-    if (idCol < 0) { msg($("namedMsg"), "The roster has no 'identifier' column.", "err"); return; }
-    const byId = new Map(roster.slice(1).map((r) => [normId(r[idCol]), r]));
-    const res = parseCsv(await resultsText(s, items));
-    const head = res[0];
-    const out = [[...roster[0], ...head.slice(1)]];
-    const seen = new Set();
-    for (const r of res.slice(1)) {
-      const p = byId.get(normId(r[0]));
-      seen.add(normId(r[0]));
-      out.push([...(p || roster[0].map((_, i) => (i === idCol ? r[0] : "(not in roster)"))), ...r.slice(1)]);
-    }
-    if (!items) for (const [id, p] of byId) if (!seen.has(id)) out.push([...p, ...head.slice(1).map((h) => (h === "submitted_at_jst" ? "absent" : ""))]);
-    download(`named_quiz_${s.code}_week${String(s.week).padStart(2, "0")}${items ? "_items" : ""}.csv`, toCsv(out));
-    const unknown = [...seen].filter((x) => !byId.has(x)).length;
-    msg($("namedMsg"), `Downloaded. ${seen.size} students in results` + (unknown ? `; ${unknown} not found in this roster.` : "."), "ok");
-  }
-  $("namedBtn").onclick = () => named(false).catch((e) => msg($("namedMsg"), e.message, "err"));
-  $("namedItemsBtn").onclick = () => named(true).catch((e) => msg($("namedMsg"), e.message, "err"));
-
-  // ---------- IDs ----------
+  // ---------- IDs (created offline with tools/crescent-roster-tool.html) ----------
+  let idData = { classes: [], identifiers: [] };
   async function loadIds() {
-    const d = await api("/identifiers");
+    idData = await api("/identifiers");
     const tb = $("idRows"); tb.innerHTML = "";
-    for (const c of d.classes) { const tr = document.createElement("tr"); tr.innerHTML = `<td>${esc(c.class_label || "(none)")}</td><td>${c.n}</td>`; tb.appendChild(tr); }
-    return new Set(d.identifiers);
-  }
-  function newId(taken) {
-    for (let t = 0; t < 1000; t++) {
-      const a = new Uint32Array(4); crypto.getRandomValues(a);
-      const words = [...a].map((x) => ID_WORDS[x % ID_WORDS.length]);
-      if (new Set(words).size < 4) continue;
-      const id = words.join("-");
-      if (!taken.has(id)) { taken.add(id); return id; }
+    for (const c of idData.classes) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${esc(c.class_label || "(none)")}</td><td>${c.n}</td><td></td>`;
+      tr.lastElementChild.append(btn("Delete this class's IDs", async () => {
+        if (!confirm(`Delete all ${c.n} IDs for ${c.class_label}? Students in this class will not be able to join quizzes until IDs are uploaded again.`)) return;
+        await api("/identifiers/delete-class", { method: "POST", body: JSON.stringify({ class_label: c.class_label }) });
+        loadIds();
+      }, "danger"));
+      tb.appendChild(tr);
     }
-    throw new Error("Could not create a unique ID");
+    // class choices when starting a quiz (keep previous ticks)
+    const box = $("sClasses"); const ticked = new Set([...box.querySelectorAll("input:checked")].map((x) => x.value)); box.innerHTML = "";
+    if (!idData.classes.length) box.innerHTML = '<span class="muted">No IDs uploaded yet (Student IDs tab).</span>';
+    for (const c of idData.classes) {
+      const l = document.createElement("label"); l.style.cssText = "display:flex;gap:6px;align-items:center;color:var(--ink);font-size:.95rem;margin:0 12px 0 0";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.value = c.class_label; cb.style.width = "auto"; cb.checked = ticked.has(c.class_label);
+      l.append(cb, document.createTextNode(`${c.class_label} (${c.n})`)); box.appendChild(l);
+    }
   }
-  $("genBtn").onclick = async () => {
+  $("exportIds").onclick = async () => {
+    await loadIds();
+    download(`crescent_current_IDs_${new Date().toISOString().slice(0, 10)}.csv`, toCsv([["identifier", "class"], ...idData.identifiers.map((r) => [r.identifier, r.class_label])]));
+  };
+  $("idUpload").onclick = async () => {
     try {
-      const f = $("genFile").files[0];
-      const label = $("genClass").value.trim();
-      if (!f || !label) { msg($("genMsg"), "Choose a roster file and enter a class label.", "err"); return; }
+      const f = $("idFile").files[0];
+      if (!f) { msg($("idMsg"), "Choose the ids_….csv file from the roster tool.", "err"); return; }
       const rows = parseCsv(await readFile(f));
-      if (rows.length < 2) { msg($("genMsg"), "The roster looks empty (the first row should be column headings).", "err"); return; }
-      const head = rows[0];
-      let idCol = head.map((h) => h.trim().toLowerCase()).indexOf("identifier");
-      if (idCol < 0) { head.push("identifier"); idCol = head.length - 1; }
-      const taken = await loadIds();
-      let made = 0;
-      const ids = [];
-      for (const r of rows.slice(1)) {
-        while (r.length < head.length) r.push("");
-        if (!normId(r[idCol])) { r[idCol] = newId(taken).replace(/-/g, " "); made++; }
-        ids.push(normId(r[idCol]));
+      const h = rows[0].map((x) => x.trim().toLowerCase());
+      const ic = h.indexOf("identifier"), cc = h.indexOf("class");
+      if (ic < 0 || cc < 0) { msg($("idMsg"), "The file needs 'identifier' and 'class' columns (use the ids_….csv file, not the roster).", "err"); return; }
+      if (h.some((x) => /name|number|氏名|学籍/.test(x))) { msg($("idMsg"), "This file seems to contain names or student numbers. Upload only the ids_….csv file.", "err"); return; }
+      const byClass = {};
+      for (const r of rows.slice(1)) (byClass[r[cc].trim()] ||= []).push(normId(r[ic]));
+      let n = 0;
+      for (const [cls, ids] of Object.entries(byClass)) {
+        for (let i = 0; i < ids.length; i += 400) { await api("/identifiers", { method: "POST", body: JSON.stringify({ class_label: cls, identifiers: ids.slice(i, i + 400) }) }); n += Math.min(400, ids.length - i); }
       }
-      download(`roster_${label.replace(/[^\w-]+/g, "_")}_with_IDs.csv`, toCsv(rows));
-      for (let i = 0; i < ids.length; i += 400) await api("/identifiers", { method: "POST", body: JSON.stringify({ class_label: label, identifiers: ids.slice(i, i + 400) }) });
       await loadIds();
-      msg($("genMsg"), `${made} new IDs created; ${ids.length} IDs uploaded for ${label}. Keep the downloaded roster file safe — it is the only link between names and IDs.`, "ok");
-    } catch (e) { msg($("genMsg"), e.message, "err"); }
+      msg($("idMsg"), `Uploaded ${n} IDs (${Object.keys(byClass).join(", ")}).`, "ok");
+    } catch (e) { msg($("idMsg"), e.message, "err"); }
   };
 
   // ---------- items ----------

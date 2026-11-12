@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Vocab Quiz — Admin</title>
+<title>Crescent Quiz — Admin</title>
 <style>
   :root { --ink:#1d2433; --muted:#6b7280; --line:#d9dee7; --accent:#2457c5; --bad:#c62828; --ok:#1a7f4b; }
   * { box-sizing:border-box; }
@@ -49,10 +49,9 @@
 
 <div id="app" class="hidden">
 <header>
-  <h1>Vocab Quiz Admin</h1>
+  <h1>Crescent Quiz Admin</h1>
   <nav id="tabs">
     <button data-t="sessions" class="on">Quizzes</button>
-    <button data-t="results">Named results</button>
     <button data-t="ids">Student IDs</button>
     <button data-t="items">Item bank</button>
   </nav>
@@ -70,6 +69,7 @@
         <div><label>Seconds per item</label><input id="sSec" type="number" min="3" max="60" value="10"></div>
         <div><label>Label (optional)</label><input id="sLabel" placeholder="e.g. BI-15 Tue 2"></div>
       </div>
+      <div style="margin-top:12px"><label>Classes that can join (students' IDs must belong to one of these)</label><div class="row" id="sClasses"></div></div>
       <div class="row" style="margin-top:14px"><button class="btn" id="createBtn">Start and show QR</button></div>
       <div id="createMsg" class="msg"></div>
     </section>
@@ -80,35 +80,20 @@
     </section>
   </div>
 
-  <!-- NAMED RESULTS -->
-  <div data-p="results" class="hidden">
-    <section class="card">
-      <h2>Match results to names (on this computer only)</h2>
-      <p class="muted">Choose your local roster file (CSV with an <b>identifier</b> column, as produced on the Student IDs tab). It is read by this browser and never uploaded. The named file is downloaded to your computer.</p>
-      <div class="grid">
-        <div style="grid-column: span 2"><label>Roster CSV</label><input type="file" id="rosterFile" accept=".csv,text/csv"></div>
-        <div style="grid-column: span 2"><label>Quiz</label><select id="resSession"></select></div>
-      </div>
-      <div class="row" style="margin-top:14px"><button class="btn" id="namedBtn">Download named results</button><button class="btn sec" id="namedItemsBtn">Named item-level results</button></div>
-      <div id="namedMsg" class="msg"></div>
-    </section>
-  </div>
-
   <!-- IDS -->
   <div data-p="ids" class="hidden">
     <section class="card">
-      <h2>Create IDs for a class roster</h2>
-      <p class="muted">Choose a roster CSV (any columns, e.g. student number and name). This page assigns each student a new four-word ID, downloads <b>the roster with IDs added</b> (keep it on your computer), and uploads <b>only the IDs</b> with the class label. Students who already have an <code>identifier</code> value keep it.</p>
-      <div class="grid">
-        <div style="grid-column: span 2"><label>Roster CSV</label><input type="file" id="genFile" accept=".csv,text/csv"></div>
-        <div><label>Class label</label><input id="genClass" placeholder="e.g. BI-15"></div>
-      </div>
-      <div class="row" style="margin-top:14px"><button class="btn" id="genBtn">Create IDs, download roster, upload IDs</button></div>
-      <div id="genMsg" class="msg"></div>
+      <h2>Student IDs</h2>
+      <p class="muted">IDs are created on your own computer with the offline <b>crescent-roster-tool.html</b> (in the tools folder). Names never come to this page. The tool also adds names to results.</p>
+      <ol class="muted">
+        <li><button class="btn sec" id="exportIds">Download current ID list</button> (IDs and class labels only) and give it to the roster tool so new IDs do not repeat existing ones.</li>
+        <li>Upload the <b>ids_….csv</b> file the tool creates: <input type="file" id="idFile" accept=".csv,text/csv" style="width:auto"> <button class="btn" id="idUpload">Upload IDs</button></li>
+      </ol>
+      <div id="idMsg" class="msg"></div>
     </section>
     <section class="card">
       <h2>IDs on the server</h2>
-      <table><thead><tr><th>Class</th><th>IDs</th></tr></thead><tbody id="idRows"></tbody></table>
+      <table><thead><tr><th>Class</th><th>IDs</th><th></th></tr></thead><tbody id="idRows"></tbody></table>
       <p class="muted">The server holds only the four-word IDs and class labels, not names.</p>
     </section>
   </div>

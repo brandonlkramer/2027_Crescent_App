@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- This page is blocked from making ANY network connection: student data cannot leave this computer. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crescent roster tool (offline)</title>
+<style>
+  :root { --ink:#1d2433; --muted:#6b7280; --line:#d9dee7; --accent:#2457c5; --bad:#c62828; --ok:#1a7f4b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Hiragino Sans", sans-serif; color:var(--ink); background:#f6f7fb; }
+  main { max-width: 900px; margin: 0 auto; padding: 20px; }
+  h1 { font-size:1.3rem; margin: 6px 0 4px; }
+  .note { background:#e9f6ef; border:1px solid #b9e0c9; color:#145c37; padding:10px 14px; border-radius:10px; margin: 10px 0 18px; font-size:.95rem; }
+  section { background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px; }
+  h2 { font-size:1.05rem; margin:0 0 6px; }
+  ol { margin: 6px 0 12px 18px; padding:0; color:var(--muted); font-size:.92rem; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:12px; }
+  label { font-size:.85rem; color:var(--muted); display:block; margin-bottom:4px; }
+  input { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; width:100%; background:#fff; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.sec { background:#fff; color:var(--accent); }
+  button:disabled { opacity:.5; cursor:default; }
+  .msg { margin-top:10px; white-space:pre-wrap; font-size:.92rem; }
+  .msg.err { color:var(--bad); } .msg.ok { color:var(--ok); }
+  #slips { display:none; }
+  @media print {
+    body { background:#fff; }
+    main > *:not(#slips) { display:none !important; }
+    #slips { display:grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .slip { border:1px dashed #999; padding: 10px 12px; break-inside: avoid; height: 47mm; }
+    .slip .who { font-size: 11pt; font-weight: 700; }
+    .slip .cls { font-size: 9pt; color:#555; }
+    .slip .words { display:flex; gap:6px; margin-top:8px; }
+    .slip .words > div { flex:1; text-align:center; border:1px solid #ccc; border-radius:6px; padding:8px 0; font-size: 12pt; font-weight:700; display:flex; align-items:center; justify-content:center; }
+    .slip .words > div.sym { flex: 0 0 14mm; font-size: 20pt; font-weight:400; }
+    .slip .how { font-size: 8pt; color:#555; margin-top:6px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Crescent roster tool</h1>
+  <div class="note">Runs only on this computer. This page is technically blocked from connecting to the internet, so roster files you open here are never sent anywhere. Files it creates go to your Downloads folder.</div>
+
+  <section>
+    <h2>1. Create student IDs for a class</h2>
+    <ol>
+      <li>In the Crescent admin page, Student IDs tab: <b>Download current ID list</b> (IDs only, no names). This avoids giving two students the same ID.</li>
+      <li>Here: choose the class roster (CSV, first row = column names, e.g. student_number,name) and the ID list, and type the class label.</li>
+      <li>Keep <b>roster_…_with_IDs.csv</b> on your computer. Upload <b>ids_….csv</b> in the admin page. Print the ID slips for students.</li>
+    </ol>
+    <div class="grid">
+      <div><label>Class roster CSV</label><input type="file" id="roster" accept=".csv,text/csv"></div>
+      <div><label>Current ID list from the admin page (recommended)</label><input type="file" id="existing" accept=".csv,text/csv"></div>
+      <div><label>Class label (e.g. BI-15-Tue2)</label><input id="cls"></div>
+    </div>
+    <div class="row"><button id="makeBtn">Create IDs</button></div>
+    <div class="row"><button class="sec" id="dlRoster" disabled>① Download roster with IDs (keep)</button><button class="sec" id="dlIds" disabled>② Download IDs for upload</button><button class="sec" id="slipBtn" disabled>③ Print ID slips</button></div>
+    <div id="makeMsg" class="msg"></div>
+  </section>
+
+  <section>
+    <h2>2. Add names to quiz results</h2>
+    <ol>
+      <li>In the admin page, download a quiz's <b>CSV</b> or <b>Item CSV</b> (IDs only).</li>
+      <li>Here: choose that file and the matching roster_…_with_IDs.csv file(s). You can choose several rosters at once.</li>
+    </ol>
+    <div class="grid">
+      <div><label>Quiz results CSV (from the admin page)</label><input type="file" id="results" accept=".csv,text/csv"></div>
+      <div><label>Roster(s) with IDs</label><input type="file" id="rosters" accept=".csv,text/csv" multiple></div>
+    </div>
+    <div class="row"><button id="nameBtn">Download named results</button></div>
+    <div id="nameMsg" class="msg"></div>
+  </section>
+
+  <div id="slips"></div>
+</main>
+<script>
+// Crescent ID word lists: an ID is one word from each list, in order (16^4 = 65,536 IDs).
+// Within a list every word starts with a different letter and has its own picture.
+// The same lists are copied into tools/crescent-roster-tool.html — keep them identical.
+window.CRESCENT_ID_LISTS = [
+  { title: "どうぶつ", words: [
+    ["bear","🐻"],["cat","🐱"],["dog","🐶"],["eagle","🦅"],["fish","🐟"],["goat","🐐"],["horse","🐴"],["lion","🦁"],
+    ["monkey","🐵"],["owl","🦉"],["pig","🐷"],["rabbit","🐰"],["snake","🐍"],["tiger","🐯"],["whale","🐳"],["zebra","🦓"] ] },
+  { title: "たべもの", words: [
+    ["apple","🍎"],["bread","🍞"],["cake","🍰"],["donut","🍩"],["egg","🥚"],["grape","🍇"],["honey","🍯"],["juice","🧃"],
+    ["lemon","🍋"],["melon","🍈"],["noodle","🍜"],["orange","🍊"],["pizza","🍕"],["rice","🍚"],["salad","🥗"],["tea","🍵"] ] },
+  { title: "しぜん", words: [
+    ["beach","🏖️"],["cloud","☁️"],["desert","🏜️"],["earth","🌍"],["fire","🔥"],["island","🏝️"],["leaf","🍃"],["moon","🌙"],
+    ["night","🌃"],["ocean","🌊"],["plant","🌱"],["rain","🌧️"],["snow","❄️"],["tree","🌳"],["volcano","🌋"],["wind","💨"] ] },
+  { title: "もの", words: [
+    ["ball","⚽"],["car","🚗"],["drum","🥁"],["flag","🚩"],["guitar","🎸"],["hat","🎩"],["jacket","🧥"],["key","🔑"],
+    ["letter","✉️"],["map","🗺️"],["piano","🎹"],["rocket","🚀"],["ship","🚢"],["train","🚆"],["umbrella","☂️"],["watch","⌚"] ] },
+];
+
+// Check symbol printed on each ID slip: one of 8, worked out from the four words.
+// Students tap it after choosing their words; a wrong word almost always gives a different symbol.
+window.CRESCENT_SYMBOLS = [["●","#d32f2f"],["▲","#1565c0"],["■","#2e7d32"],["★","#ef8f00"],["♥","#d81b60"],["◆","#6a1b9a"],["✚","#00838f"],["☾","#5d4037"]];
+window.crescentSymbolOf = function (id) {
+  let h = 2166136261;
+  for (const c of id) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return h % window.CRESCENT_SYMBOLS.length;
+};
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const LISTS = window.CRESCENT_ID_LISTS;
+  let lastSlips = null, made_ = null;
+
+  const msg = (el, text, kind) => { el.textContent = text; el.className = "msg " + (kind || ""); };
+  const readFile = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(f, "utf-8"); });
+  const normId = (s) => String(s || "").toLowerCase().trim().replace(/[\s_.,]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  const validId = (id) => { const p = id.split("-"); return p.length === 4 && p.every((w, i) => LISTS[i].words.some((x) => x[0] === w)); };
+  const SYMS = window.CRESCENT_SYMBOLS;
+  // IDs in the same class must differ in at least 2 of the 4 words, so one wrong tap never gives a classmate's ID
+  const MIN_DIFF = 2;
+  const diff = (a, b) => { const x = a.split("-"), y = b.split("-"); let d = 0; for (let i = 0; i < 4; i++) if (x[i] !== y[i]) d++; return d; };
+
+  function parseCsv(text) {
+    text = text.replace(/^﻿/, "");
+    const rows = []; let row = [], cell = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+      else if (c === '"') q = true;
+      else if (c === ",") { row.push(cell); cell = ""; }
+      else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+      else cell += c;
+    }
+    if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter((r) => r.some((c) => c.trim() !== ""));
+  }
+  function toCsv(rows) {
+    const cell = (v) => { const s = v == null ? "" : String(v); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    return "﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
+  }
+  function download(name, text) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  }
+  const col = (head, name) => head.map((h) => h.trim().toLowerCase()).indexOf(name);
+  const safe = (s) => s.replace(/[^\w-]+/g, "_");
+
+  function randomId(taken, classIds) {
+    for (let t = 0; t < 20000; t++) {
+      const a = new Uint32Array(4); crypto.getRandomValues(a);
+      const id = [...a].map((x, i) => LISTS[i].words[x % 16][0]).join("-");
+      if (taken.has(id)) continue;
+      if (classIds.some((c) => diff(c, id) < MIN_DIFF)) continue;
+      taken.add(id); classIds.push(id); return id;
+    }
+    throw new Error("Could not find a free ID (class too large?)");
+  }
+
+  // ---------- 1. create IDs ----------
+  $("makeBtn").onclick = async () => {
+    try {
+      const f = $("roster").files[0]; const cls = $("cls").value.trim();
+      if (!f || !cls) { msg($("makeMsg"), "Choose the class roster and type a class label.", "err"); return; }
+      const rows = parseCsv(await readFile(f));
+      if (rows.length < 2) { msg($("makeMsg"), "The roster looks empty. The first row should be column names.", "err"); return; }
+      const taken = new Set();
+      const classIds = []; // IDs already in this class (from the ID list and this roster)
+      let existingNote = "No current ID list chosen: duplicates with other classes are possible (the admin page will refuse them).";
+      if ($("existing").files[0]) {
+        const ex = parseCsv(await readFile($("existing").files[0]));
+        const c = col(ex[0], "identifier");
+        if (c < 0) { msg($("makeMsg"), "The ID list has no 'identifier' column.", "err"); return; }
+        const ec = col(ex[0], "class");
+        ex.slice(1).forEach((r) => { const id = normId(r[c]); taken.add(id); if (ec >= 0 && r[ec].trim() === cls) classIds.push(id); });
+        existingNote = `${taken.size} existing IDs avoided.`;
+      }
+      const head = rows[0];
+      let idc = col(head, "identifier"); if (idc < 0) { head.push("identifier"); idc = head.length - 1; }
+      let cc = col(head, "class"); if (cc < 0) { head.push("class"); cc = head.length - 1; }
+      let made = 0, kept = 0;
+      const ids = [];
+      // Keep valid IDs already in the roster first, then make new ones that respect them
+      for (const r of rows.slice(1)) {
+        while (r.length < head.length) r.push("");
+        const cur = normId(r[idc]);
+        if (cur && validId(cur)) { taken.add(cur); if (!classIds.includes(cur)) classIds.push(cur); } else r[idc] = "";
+      }
+      for (const r of rows.slice(1)) {
+        if (r[idc]) kept++;
+        else { r[idc] = randomId(taken, classIds).split("-").join(" "); made++; }
+        r[cc] = cls;
+        ids.push(normId(r[idc]));
+      }
+      if (new Set(ids).size !== ids.length) { msg($("makeMsg"), "Two students in this roster have the same ID. Clear the identifier column for one of them and try again.", "err"); return; }
+      made_ = { roster: [`roster_${safe(cls)}_with_IDs.csv`, toCsv(rows)], ids: [`ids_${safe(cls)}.csv`, toCsv([["identifier", "class"], ...ids.map((i) => [i, cls])])] };
+      $("dlRoster").disabled = false; $("dlIds").disabled = false;
+      // Slips: first two non-ID columns identify the student on the slip
+      const nameCols = head.map((_, i) => i).filter((i) => i !== idc && i !== cc).slice(0, 2);
+      lastSlips = { cls, rows: rows.slice(1).map((r) => ({ who: nameCols.map((i) => r[i]).join("  "), id: normId(r[idc]) })) };
+      $("slipBtn").disabled = false;
+      msg($("makeMsg"), `${made} new IDs, ${kept} kept from the roster. ${existingNote}\nNow download both files: ① roster_${safe(cls)}_with_IDs.csv — keep it safe, it is the only link between names and IDs; ② ids_${safe(cls)}.csv — upload this one in the admin page.`, "ok");
+    } catch (e) { msg($("makeMsg"), e.message, "err"); }
+  };
+
+  $("dlRoster").onclick = () => made_ && download(...made_.roster);
+  $("dlIds").onclick = () => made_ && download(...made_.ids);
+  $("slipBtn").onclick = () => {
+    if (!lastSlips) return;
+    const box = $("slips"); box.innerHTML = "";
+    for (const s of lastSlips.rows) {
+      const d = document.createElement("div"); d.className = "slip";
+      const k = window.crescentSymbolOf(s.id);
+      const words = s.id.split("-").map((w) => `<div>${w}</div>`).join("") + `<div class="sym" style="color:${SYMS[k][1]}">${SYMS[k][0]}</div>`;
+      d.innerHTML = `<div class="who"></div><div class="cls"></div><div class="words">${words}</div><div class="how">Crescent クイズのID：この順番で4つ選び、最後に「しるし」をタップします。なくさないでください。</div>`;
+      d.querySelector(".who").textContent = s.who;
+      d.querySelector(".cls").textContent = lastSlips.cls;
+      box.appendChild(d);
+    }
+    window.print();
+  };
+
+  // ---------- 2. named results ----------
+  $("nameBtn").onclick = async () => {
+    try {
+      const rf = $("results").files[0]; const rosterFiles = [...$("rosters").files];
+      if (!rf || !rosterFiles.length) { msg($("nameMsg"), "Choose the results CSV and at least one roster with IDs.", "err"); return; }
+      const res = parseCsv(await readFile(rf));
+      const rid = col(res[0], "identifier");
+      if (rid < 0) { msg($("nameMsg"), "The results file has no 'identifier' column.", "err"); return; }
+      let rosterHead = null; const byId = new Map();
+      for (const f of rosterFiles) {
+        const rows = parseCsv(await readFile(f));
+        const idc = col(rows[0], "identifier");
+        if (idc < 0) { msg($("nameMsg"), `${f.name} has no 'identifier' column.`, "err"); return; }
+        if (!rosterHead) rosterHead = rows[0].filter((_, i) => i !== idc);
+        for (const r of rows.slice(1)) byId.set(normId(r[idc]), r.filter((_, i) => i !== idc));
+      }
+      const itemLevel = col(res[0], "position") >= 0;
+      // The roster already has the class column, so drop the results' copy
+      const keep = res[0].map((_, i) => i).filter((i) => res[0][i].trim().toLowerCase() !== "class");
+      const pick = (r) => keep.map((i) => r[i]);
+      const resHead = res[0];
+      const out = [[...rosterHead, ...pick(resHead)]];
+      const seen = new Set(); let unknown = 0;
+      for (const r of res.slice(1)) {
+        const id = normId(r[rid]); seen.add(id);
+        const p = byId.get(id);
+        if (!p) unknown++;
+        out.push([...(p || rosterHead.map(() => "(not in roster)")), ...pick(r)]);
+      }
+      // In the summary file, list students who did not take the quiz (only for the classes in this quiz)
+      let absent = 0;
+      if (!itemLevel) {
+        const cc = col(rosterHead, "class");
+        const classesInQuiz = new Set(res.slice(1).map((r) => byId.get(normId(r[rid]))).filter(Boolean).map((p) => (cc >= 0 ? p[cc] : "")));
+        const subCol = col(resHead, "submitted_at_jst");
+        for (const [id, p] of byId) {
+          if (seen.has(id) || (cc >= 0 && classesInQuiz.size && !classesInQuiz.has(p[cc]))) continue;
+          const row = resHead.map((h, i) => (i === rid ? id.split("-").join(" ") : i === subCol ? "absent" : ""));
+          out.push([...p, ...pick(row)]); absent++;
+        }
+      }
+      const base = rf.name.replace(/\.csv$/i, "");
+      download(`named_${base}.csv`, toCsv(out));
+      msg($("nameMsg"), `Downloaded named_${base}.csv: ${seen.size} students with results` + (absent ? `, ${absent} absent` : "") + (unknown ? `; ${unknown} IDs not found in the roster(s).` : "."), unknown ? "err" : "ok");
+    } catch (e) { msg($("nameMsg"), e.message, "err"); }
+  };
+})();
+</script>
+</body>
+</html>

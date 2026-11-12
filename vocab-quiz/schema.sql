@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   new_ratio   REAL NOT NULL,
   keyboard    TEXT NOT NULL CHECK (keyboard IN ('restricted','full')),
   seconds     INTEGER NOT NULL,
+  classes     TEXT,                  -- class labels allowed to join, one per line
   status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
   created_at  INTEGER NOT NULL,
   closed_at   INTEGER
@@ -55,5 +56,6 @@ CREATE TABLE IF NOT EXISTS responses (
   typed       TEXT,
   correct     INTEGER NOT NULL,
   ms          INTEGER,
+  tries       INTEGER,               -- answers entered before the item ended
   PRIMARY KEY (attempt_id, position)
 );

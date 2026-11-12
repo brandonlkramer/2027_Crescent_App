@@ -1,3 +1,10 @@
 node_modules/
 .wrangler/
 .dev.vars
+
+# Student rosters and ID files never go into git
+*roster*.csv
+*Roster*.csv
+ids_*.csv
+named_*.csv
+quiz_*.csv

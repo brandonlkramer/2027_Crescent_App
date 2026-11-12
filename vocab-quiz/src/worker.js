@@ -94,8 +94,20 @@ function promptSentence(sentence, answer) {
   // Show first letter in the blank: "She o___ the window."
   return sentence.replace("___", answer.charAt(0) + "___");
 }
+const MIN_KEYS = 8;          // restricted keyboard: at least this many keys enabled
+const MIN_DISTRACTORS = 3;   // and always at least this many letters not in the answer
+const DISTRACTOR_POOL = "eaitonsrlhdcumpgbfwyvk"; // common letters first, so extras look plausible
 function lettersOf(answer) {
-  return [...new Set(answer.toLowerCase().replace(/[^a-z]/g, "").split(""))].sort().join("");
+  const own = [...new Set(answer.toLowerCase().replace(/[^a-z]/g, "").split(""))];
+  const target = Math.min(26, Math.max(MIN_KEYS, own.length + MIN_DISTRACTORS));
+  const pool = shuffle(DISTRACTOR_POOL.split("").filter((c) => !own.includes(c)));
+  // Prefer the more common half of the pool, but keep some randomness
+  pool.sort((a, b) => DISTRACTOR_POOL.indexOf(a) - DISTRACTOR_POOL.indexOf(b) + (randInt(9) - 4));
+  const extra = pool.slice(0, Math.max(0, target - own.length));
+  return [...own, ...extra].sort().join("");
+}
+async function answerHash(token, id, answer) {
+  return sha256(`${token}:${id}:${normAnswer(answer)}`);
 }
 function csvCell(v) {
   if (v === null || v === undefined) return "";
@@ -147,10 +159,14 @@ async function buildQuiz(env, s) {
   return headwords.map((h) => byHw[h][randInt(byHw[h].length)]);
 }
 
-function itemForClient(r, keyboard) {
-  const out = { id: r.id, prompt: promptSentence(r.sentence, r.answer), cue: r.cue, first: r.answer.charAt(0), len: r.answer.length };
+async function itemForClient(r, keyboard, token) {
+  // h lets the phone check an answer (for retries) without receiving the answer itself
+  const out = { id: r.id, prompt: promptSentence(r.sentence, r.answer), cue: r.cue, first: r.answer.charAt(0), h: await answerHash(token, r.id, r.answer) };
   if (keyboard === "restricted") out.letters = lettersOf(r.answer);
   return out;
+}
+function clientItems(rows, keyboard, token) {
+  return Promise.all(rows.map((r) => itemForClient(r, keyboard, token)));
 }
 
 // ---------- student routes ----------
@@ -166,7 +182,9 @@ async function join(request, env) {
   if (s.status !== "open") return json({ error: "このクイズは終了しました。" }, 403);
 
   const known = await env.DB.prepare("SELECT class_label FROM identifiers WHERE identifier = ?").bind(identifier).first();
-  if (!known) return json({ error: "このIDは登録されていません。つづりを確認してください。" }, 403);
+  const allowed = String(s.classes || "").split("\n").filter(Boolean);
+  if (!known || (allowed.length && !allowed.includes(known.class_label)))
+    return json({ error: "このIDはこのクイズに登録されていません。言葉を確認してください。" }, 403);
 
   const existing = await env.DB.prepare("SELECT * FROM attempts WHERE session_id = ? AND identifier = ?").bind(s.id, identifier).first();
   if (existing) {
@@ -178,7 +196,7 @@ async function join(request, env) {
       const ph = ids.map(() => "?").join(",");
       const rows = (await env.DB.prepare(`SELECT id, headword, sentence, answer, cue FROM items WHERE id IN (${ph})`).bind(...ids).all()).results;
       const map = Object.fromEntries(rows.map((r) => [r.id, r]));
-      return json({ token: tok, seconds: s.seconds, keyboard: s.keyboard, items: ids.filter((i) => map[i]).map((i) => itemForClient(map[i], s.keyboard)) });
+      return json({ token: tok, seconds: s.seconds, keyboard: s.keyboard, items: await clientItems(ids.filter((i) => map[i]).map((i) => map[i]), s.keyboard, tok) });
     }
     return json({ error: "このIDはすでに参加しています。先生に知らせてください。" }, 409);
   }
@@ -193,7 +211,7 @@ async function join(request, env) {
   } catch {
     return json({ error: "このIDはすでに参加しています。先生に知らせてください。" }, 409);
   }
-  return json({ token, seconds: s.seconds, keyboard: s.keyboard, items: items.map((r) => itemForClient(r, s.keyboard)) });
+  return json({ token, seconds: s.seconds, keyboard: s.keyboard, items: await clientItems(items, s.keyboard, token) });
 }
 
 async function submit(request, env) {
@@ -226,9 +244,10 @@ async function submit(request, env) {
     const correct = typed !== "" && typed === normAnswer(it.answer) ? 1 : 0;
     score += correct;
     const ms = Number.isFinite(g.ms) ? Math.max(0, Math.min(600000, Math.round(g.ms))) : null;
+    const tries = Number.isFinite(g.tries) ? Math.max(0, Math.min(99, Math.round(g.tries))) : null;
     stmts.push(env.DB.prepare(
-      "INSERT INTO responses (attempt_id, position, item_id, headword, answer, typed, correct, ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(a.id, pos + 1, id, it.headword, it.answer, typed, correct, ms));
+      "INSERT INTO responses (attempt_id, position, item_id, headword, answer, typed, correct, ms, tries) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(a.id, pos + 1, id, it.headword, it.answer, typed, correct, ms, tries));
     feedback.push({ sentence: it.sentence, answer: it.answer, typed, correct: !!correct, cue: it.cue });
   });
   stmts.push(env.DB.prepare("UPDATE attempts SET submitted_at = ?, score = ? WHERE id = ? AND submitted_at IS NULL").bind(now(), score, a.id));
@@ -250,7 +269,9 @@ async function admin(request, env, url) {
     const new_ratio = Math.min(1, Math.max(0, Number(b.new_ratio ?? 0.8)));
     const keyboard = b.keyboard === "full" ? "full" : "restricted";
     const seconds = Math.min(60, Math.max(3, parseInt(b.seconds ?? 10, 10)));
+    const classes = (Array.isArray(b.classes) ? b.classes : []).map((c) => String(c).slice(0, 40)).filter(Boolean);
     if (!(week >= 1)) return json({ error: "Week must be 1 or higher" }, 400);
+    if (!classes.length) return json({ error: "Choose at least one class" }, 400);
     const cnt = await env.DB.prepare("SELECT COUNT(DISTINCT headword) AS n FROM items WHERE week = ?").bind(week).first();
     if (!cnt || !cnt.n) return json({ error: `No items loaded for week ${week}` }, 400);
     const pool = await env.DB.prepare("SELECT COUNT(DISTINCT headword) AS n FROM items WHERE week <= ?").bind(week).first();
@@ -260,8 +281,8 @@ async function admin(request, env, url) {
       const code = randomCode();
       try {
         const r = await env.DB.prepare(
-          "INSERT INTO sessions (code, label, week, n_items, new_ratio, keyboard, seconds, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *"
-        ).bind(code, String(b.label || "").slice(0, 80), week, n_items, new_ratio, keyboard, seconds, now()).first();
+          "INSERT INTO sessions (code, label, week, n_items, new_ratio, keyboard, seconds, classes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *"
+        ).bind(code, String(b.label || "").slice(0, 80), week, n_items, new_ratio, keyboard, seconds, classes.join("\n"), now()).first();
         return json({ session: r, warnings });
       } catch (e) {
         if (!String(e.message).includes("UNIQUE")) throw e;
@@ -318,11 +339,11 @@ async function admin(request, env, url) {
       return new Response(toCsv(out), { headers: head });
     }
     const rows = (await env.DB.prepare(
-      `SELECT a.identifier, r.position, r.item_id, r.headword, r.answer, r.typed, r.correct, r.ms
+      `SELECT a.identifier, r.position, r.item_id, r.headword, r.answer, r.typed, r.correct, r.tries, r.ms
        FROM responses r JOIN attempts a ON a.id = r.attempt_id WHERE a.session_id = ? ORDER BY a.identifier, r.position`
     ).bind(sid).all()).results;
-    const out = [["identifier", "session_code", "week", "keyboard", "position", "item_id", "headword", "answer", "typed", "correct", "ms"]];
-    for (const r of rows) out.push([r.identifier, s.code, s.week, s.keyboard, r.position, r.item_id, r.headword, r.answer, r.typed, r.correct, r.ms]);
+    const out = [["identifier", "session_code", "week", "keyboard", "position", "item_id", "headword", "answer", "typed", "correct", "tries", "ms"]];
+    for (const r of rows) out.push([r.identifier, s.code, s.week, s.keyboard, r.position, r.item_id, r.headword, r.answer, r.typed, r.correct, r.tries, r.ms]);
     return new Response(toCsv(out), { headers: head });
   }
 
@@ -333,6 +354,17 @@ async function admin(request, env, url) {
     if (bad.length) return json({ error: `Invalid identifiers: ${bad.slice(0, 5).join(", ")}` }, 400);
     if (list.length > 500) return json({ error: "Send at most 500 per request" }, 400);
     const label = String(b.class_label || "").slice(0, 40);
+    if (!label) return json({ error: "Missing class label" }, 400);
+    // Refuse IDs already registered to a different class (would silently move a student)
+    const clash = [];
+    for (let i = 0; i < list.length; i += 90) {
+      const chunk = list.slice(i, i + 90);
+      const rows = (await env.DB.prepare(
+        `SELECT identifier, class_label FROM identifiers WHERE class_label != ? AND identifier IN (${chunk.map(() => "?").join(",")})`
+      ).bind(label, ...chunk).all()).results;
+      clash.push(...rows);
+    }
+    if (clash.length) return json({ error: `${clash.length} ID(s) already belong to another class (e.g. ${clash[0].identifier} in ${clash[0].class_label}). Download the current ID list, give it to the roster tool, and make IDs again.`, clash }, 409);
     const t = now();
     const stmts = [];
     for (let i = 0; i < list.length; i += 30) {
@@ -347,8 +379,13 @@ async function admin(request, env, url) {
   }
   if (p === "/identifiers" && m === "GET") {
     const rows = (await env.DB.prepare("SELECT class_label, COUNT(*) AS n FROM identifiers GROUP BY class_label ORDER BY class_label").all()).results;
-    const all = (await env.DB.prepare("SELECT identifier FROM identifiers").all()).results.map((r) => r.identifier);
+    const all = (await env.DB.prepare("SELECT identifier, class_label FROM identifiers ORDER BY class_label, identifier").all()).results;
     return json({ classes: rows, identifiers: all });
+  }
+  if (p === "/identifiers/delete-class" && m === "POST") {
+    const b = await body(request);
+    const r = await env.DB.prepare("DELETE FROM identifiers WHERE class_label = ?").bind(String(b.class_label || "")).run();
+    return json({ ok: true, count: r.meta.changes });
   }
   if (p === "/identifiers/delete" && m === "POST") {
     const b = await body(request);

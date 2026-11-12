@@ -6,7 +6,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute vocab-quiz --remote --file schema.sql",
-    "setup": "node setup.mjs"
+    "setup": "node setup.mjs",
+    "build:tool": "node tools/build-tool.mjs",
+    "db:migrate": "wrangler d1 execute vocab-quiz --remote --file migrations/002_classes_tries.sql"
   },
   "keywords": [],
   "author": "",
