@@ -163,6 +163,8 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
 .badge { font-family: var(--font-ja); font-size: 0.7rem; font-weight: 700; color: #fff; background: var(--roof); border-radius: 999px; padding: 1px 8px; }
 .badge.miss { background: var(--bad-soft); color: var(--bad); }
 .badge.later { background: var(--key); color: var(--muted); }
+.badge.free { background: var(--key); color: var(--ink); font-size: 0.75rem; padding: 2px 10px; align-self: flex-start; }
+.radios.inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .wk .btns { display: flex; flex-direction: column; gap: 6px; flex: 0 0 130px; }
 .wk .btns .btn { padding: 9px 10px; font-size: 0.9rem; line-height: 1.25; }
 .btn small { display: block; font-weight: 400; font-size: 0.75rem; opacity: 0.85; }
@@ -214,6 +216,7 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
     <!-- PRACTICE -->
     <section id="view-practice" hidden>
       <div id="p-run" class="stack">
+        <span class="badge free" id="p-free" data-t="freeLabel" hidden></span>
         <div class="meta"><span id="p-count"></span><span id="p-week"></span></div>
         <div class="bar"><i id="p-bar"></i></div>
         <div class="timer-row"><span class="meta" data-t="timeLeft"></span><span class="clock" id="p-clock"></span></div>
@@ -237,6 +240,7 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
         <p class="muted" data-t="allDoneBody"></p>
         <div class="row">
           <button class="btn" id="p-empty-quiz" type="button" data-t="pquiz"></button>
+          <button class="btn secondary" id="p-empty-free" type="button" data-t="freeBtn"></button>
           <button class="btn secondary" id="p-empty-home" type="button" data-t="home"></button>
         </div>
       </div>
@@ -293,6 +297,18 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
   </div>
 </div>
 
+<!-- Free review confirmation -->
+<div class="overlay" id="free-dialog" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="free-title">
+    <h2 id="free-title" data-t="freeTitle"></h2>
+    <p data-t="freeBody"></p>
+    <div class="row">
+      <button class="btn" id="free-go" type="button" data-t="freeGo"></button>
+      <button class="btn secondary" id="free-back" type="button" data-t="freeBack"></button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings -->
 <div class="overlay" id="settings-dialog" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -305,6 +321,16 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
       </div>
     </fieldset>
     <fieldset class="field">
+      <legend data-t="timeSetting"></legend>
+      <div class="radios inline">
+        <label class="set-option"><input type="radio" name="secs" value="10"><span><strong data-t="s10"></strong></span></label>
+        <label class="set-option"><input type="radio" name="secs" value="15"><span><strong data-t="s15"></strong></span></label>
+        <label class="set-option"><input type="radio" name="secs" value="20"><span><strong data-t="s20"></strong></span></label>
+        <label class="set-option"><input type="radio" name="secs" value="30"><span><strong data-t="s30"></strong></span></label>
+      </div>
+      <p class="muted small" data-t="timeNote"></p>
+    </fieldset>
+    <fieldset class="field">
       <legend data-t="reviewSetting"></legend>
       <label class="set-option"><input type="checkbox" id="skip-known"><span><strong data-t="skipKnown"></strong><span class="muted small" data-t="skipKnownNote"></span></span></label>
     </fieldset>
@@ -314,7 +340,9 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
 <script>
 /* ---------- Sample item bank (schema v1) ---------- */
 const WORDS_PER_WEEK = 50;
-const TIME_LIMIT = 10; /* seconds per item, shared by practice and quizzes */
+const TIME_CHOICES = [10, 15, 20, 30];
+/* seconds per item, shared by practice and the practice quiz; 15 by default (as in classroom quizzes); changeable in settings */
+let TIME_LIMIT = 15; /* replaced by the saved setting once storage is ready (below) */
 /* Week 1 bank: NGSL 1.2 content words from rank 500 (official NGSL 1.2 SFI ranks).
    Sentences are original, written from COCA evidence (senses, forms, collocations); drafts awaiting review. */
 const BANK = [{"order":1,"rank":500,"lemma":"sign","senses":[{"id":"sign-n-notice","pos":"noun","gloss":"標識・看板","pattern":"stop/street/warning sign","items":[{"id":"sign-n-notice-1","s":"There is a stop ___ at the corner.","a":"sign","form":"base","cue":"標識"}]},{"id":"sign-n-indication","pos":"noun","gloss":"兆し・しるし","pattern":"a sign of; no sign(s) of; a good sign","items":[{"id":"sign-n-indication-1","s":"Dark clouds are often a ___ of rain.","a":"sign","form":"base","cue":"兆し"}]},{"id":"sign-v","pos":"verb","gloss":"署名する","pattern":"sign a contract/paper; sign here; sign up","items":[{"id":"sign-v-1","s":"Please ___ your name at the bottom.","a":"sign","form":"base","cue":"署名して"}]}]},{"order":2,"rank":501,"lemma":"claim","senses":[{"id":"claim-v","pos":"verb","gloss":"主張する","pattern":"claim that ...; claim to be ...","items":[{"id":"claim-v-1","s":"He ___ that he saw a ghost last night.","a":"claimed","form":"past","cue":"主張した"}]},{"id":"claim-n","pos":"noun","gloss":"主張","pattern":"make a claim; false claims; there is no proof for the claim","items":[{"id":"claim-n-1","s":"There is no evidence for his ___.","a":"claim","form":"base","cue":"主張"}]}]},{"order":3,"rank":502,"lemma":"relationship","senses":[{"id":"relationship-n-connection","pos":"noun","gloss":"関係","pattern":"a good relationship with; the relationship between","items":[{"id":"relationship-n-connection-1","s":"She has a good ___ with her boss.","a":"relationship","form":"base","cue":"関係"}]},{"id":"relationship-n-romantic","pos":"noun","gloss":"交際・恋愛関係","pattern":"be in a relationship; a serious relationship","items":[{"id":"relationship-n-romantic-1","s":"They have been in a ___ for two years.","a":"relationship","form":"base","cue":"交際（恋人関係）"}]}]},{"order":4,"rank":503,"lemma":"travel","senses":[{"id":"travel-v","pos":"verb","gloss":"旅行する・移動する","pattern":"travel to/around; travel for work","items":[{"id":"travel-v-1","s":"I want to ___ around Europe next summer.","a":"travel","form":"base","cue":"旅行する"}]},{"id":"travel-n","pos":"noun","gloss":"旅行","pattern":"air travel; space travel; travel agency","items":[{"id":"travel-n-1","s":"Air ___ is cheaper now than it used to be.","a":"travel","form":"base","cue":"（飛行機の）旅行"}]}]},{"order":5,"rank":504,"lemma":"enjoy","senses":[{"id":"enjoy-v","pos":"verb","gloss":"楽しむ","pattern":"really enjoy ...ing; enjoy the rest of your day","items":[{"id":"enjoy-v-1","s":"I really ___ cooking with my friends.","a":"enjoy","form":"base","cue":"楽しむ"}]}]},{"order":6,"rank":505,"lemma":"death","senses":[{"id":"death-n","pos":"noun","gloss":"死","pattern":"the death of; cause deaths; death penalty; to death","items":[{"id":"death-n-1","s":"The ___ of his dog made him very sad.","a":"death","form":"base","cue":"死"}]}]},{"order":7,"rank":506,"lemma":"nice","senses":[{"id":"nice-adj-pleasant","pos":"adjective","gloss":"すてきな・良い","pattern":"a nice time/day; look nice; nice to meet you","items":[{"id":"nice-adj-pleasant-1","s":"What a ___ day!","a":"nice","form":"base","cue":"すてきな"}]},{"id":"nice-adj-kind","pos":"adjective","gloss":"親切な・優しい","pattern":"be nice to someone; it was nice of you","items":[{"id":"nice-adj-kind-1","s":"Everyone at the school was very ___ to me.","a":"nice","form":"base","cue":"親切"}]}]},{"order":8,"rank":507,"lemma":"amount","senses":[{"id":"amount-n","pos":"noun","gloss":"量・額","pattern":"a small/large amount of; the full amount","items":[{"id":"amount-n-1","s":"Add a small ___ of water.","a":"amount","form":"base","cue":"量"}]}]},{"order":9,"rank":508,"lemma":"improve","senses":[{"id":"improve-v","pos":"verb","gloss":"向上させる・良くなる","pattern":"improve quality/health/skills; has improved","items":[{"id":"improve-v-1","s":"I want to ___ my English.","a":"improve","form":"base","cue":"向上させる"}]}]},{"order":10,"rank":509,"lemma":"picture","senses":[{"id":"picture-n-photo","pos":"noun","gloss":"写真","pattern":"take a picture of; show pictures","items":[{"id":"picture-n-photo-1","s":"Can I take your ___?","a":"picture","form":"base","cue":"写真"}]},{"id":"picture-n-drawing","pos":"noun","gloss":"絵","pattern":"draw/paint a picture of","items":[{"id":"picture-n-drawing-1","s":"My little sister drew a ___ of a cat.","a":"picture","form":"base","cue":"絵"}]}]},{"order":11,"rank":510,"lemma":"boy","senses":[{"id":"boy-n","pos":"noun","gloss":"男の子・少年","pattern":"a little boy; boys and girls","items":[{"id":"boy-n-1","s":"The little ___ is playing in the park.","a":"boy","form":"base","cue":"男の子"}]}]},{"order":12,"rank":511,"lemma":"regard","senses":[{"id":"regard-concerning","pos":"preposition-like (-ing)","gloss":"〜に関して","pattern":"regarding + noun","items":[{"id":"regard-concerning-1","s":"I have a question ___ the homework.","a":"regarding","form":"-ing","cue":"〜について"}]},{"id":"regard-v-consider","pos":"verb","gloss":"みなす","pattern":"regard X as Y; be regarded as","items":[{"id":"regard-v-consider-1","s":"Many people ___ him as the best player in Japan.","a":"regard","form":"base","cue":"みなす"}]},{"id":"regard-n-greetings","pos":"noun","gloss":"よろしく（という挨拶）","pattern":"give my regards to; Best regards","items":[{"id":"regard-n-greetings-1","s":"Please give my ___ to your mother.","a":"regards","form":"plural","cue":"よろしく（と伝えて）"}]}]},{"order":13,"rank":512,"lemma":"organization","senses":[{"id":"organization-n","pos":"noun","gloss":"組織・団体","pattern":"an international organization; join an organization","items":[{"id":"organization-n-1","s":"She works for an international ___.","a":"organization","form":"base","cue":"機関（組織）"}]}]},{"order":14,"rank":513,"lemma":"happy","senses":[{"id":"happy-adj-glad","pos":"adjective","gloss":"うれしい・幸せな","pattern":"so happy; happy with; Happy birthday","items":[{"id":"happy-adj-glad-1","s":"I am so ___ to see you again.","a":"happy","form":"base","cue":"うれしい"}]},{"id":"happy-adj-willing","pos":"adjective","gloss":"喜んで（〜する）","pattern":"be happy to + verb","items":[{"id":"happy-adj-willing-1","s":"I would be ___ to help you.","a":"happy","form":"base","cue":"喜んで"}]}]},{"order":15,"rank":514,"lemma":"couple","senses":[{"id":"couple-n-few","pos":"noun","gloss":"2、3（の）","pattern":"a couple of + plural noun","items":[{"id":"couple-n-few-1","s":"I will be back in a ___ of minutes.","a":"couple","form":"base","cue":"2、3（分）"}]},{"id":"couple-n-pair","pos":"noun","gloss":"夫婦・カップル","pattern":"a young/married couple","items":[{"id":"couple-n-pair-1","s":"The young ___ just got married.","a":"couple","form":"base","cue":"カップル"}]}]},{"order":16,"rank":515,"lemma":"act","senses":[{"id":"act-v-behave","pos":"verb","gloss":"行動する・振る舞う","pattern":"act like; act quickly; act as if","items":[{"id":"act-v-behave-1","s":"Please stop ___ like a child.","a":"acting","form":"-ing","cue":"振る舞う（のを）"}]},{"id":"act-n-deed","pos":"noun","gloss":"行為","pattern":"an act of kindness/violence","items":[{"id":"act-n-deed-1","s":"It was an ___ of kindness.","a":"act","form":"base","cue":"行為"}]},{"id":"act-v-perform","pos":"verb","gloss":"演じる","pattern":"act in a film; start acting","items":[{"id":"act-v-perform-1","s":"She wants to ___ in movies.","a":"act","form":"base","cue":"演技をする"}]}]},{"order":17,"rank":516,"lemma":"range","senses":[{"id":"range-n","pos":"noun","gloss":"範囲・幅","pattern":"a wide range of; price range; age range","items":[{"id":"range-n-1","s":"The store sells a wide ___ of products.","a":"range","form":"base","cue":"幅広い（品ぞろえ）"}]},{"id":"range-v","pos":"verb","gloss":"（〜から〜に）及ぶ","pattern":"range from X to Y","items":[{"id":"range-v-1","s":"Prices ___ from 500 to 3,000 yen.","a":"range","form":"base","cue":"（幅が）ある"}]}]},{"order":18,"rank":517,"lemma":"quality","senses":[{"id":"quality-n-standard","pos":"noun","gloss":"質・品質","pattern":"high quality; quality of life; air quality","items":[{"id":"quality-n-standard-1","s":"This shop sells high ___ food.","a":"quality","form":"base","cue":"品質"}]},{"id":"quality-n-trait","pos":"noun","gloss":"長所・資質","pattern":"good qualities; the qualities of a leader","items":[{"id":"quality-n-trait-1","s":"Being honest is one of her best ___.","a":"qualities","form":"plural","cue":"長所"}]}]},{"order":19,"rank":518,"lemma":"project","senses":[{"id":"project-n","pos":"noun","gloss":"計画・課題・プロジェクト","pattern":"work on a project; a science project","items":[{"id":"project-n-1","s":"We are working on a new ___.","a":"project","form":"base","cue":"プロジェクト"}]}]},{"order":20,"rank":519,"lemma":"round","senses":[{"id":"round-n","pos":"noun","gloss":"（試合などの）回","pattern":"the first/final round; another round","items":[{"id":"round-n-1","s":"Our team won the first ___.","a":"round","form":"base","cue":"回戦"}]},{"id":"round-adj","pos":"adjective","gloss":"丸い","pattern":"a round table; round trip","items":[{"id":"round-adj-1","s":"We sat at a ___ table.","a":"round","form":"base","cue":"丸い"}]}]},{"order":21,"rank":520,"lemma":"opportunity","senses":[{"id":"opportunity-n","pos":"noun","gloss":"機会・チャンス","pattern":"a great opportunity to; get/miss the opportunity","items":[{"id":"opportunity-n-1","s":"This is a great ___ to practice English.","a":"opportunity","form":"base","cue":"機会"}]}]},{"order":22,"rank":521,"lemma":"road","senses":[{"id":"road-n","pos":"noun","gloss":"道路・道","pattern":"cross the road; down the road; road trip","items":[{"id":"road-n-1","s":"Be careful when you cross the ___.","a":"road","form":"base","cue":"道路"}]}]},{"order":23,"rank":522,"lemma":"accord","senses":[{"id":"accord-according","pos":"preposition-like (-ing)","gloss":"〜によると","pattern":"according to","items":[{"id":"accord-according-1","s":"___ to the news, it will rain tomorrow.","a":"according","form":"-ing","cue":"（〜に）よると"}]}]},{"order":24,"rank":523,"lemma":"list","senses":[{"id":"list-n","pos":"noun","gloss":"リスト・一覧","pattern":"make a list; on the list","items":[{"id":"list-n-1","s":"I made a shopping ___.","a":"list","form":"base","cue":"リスト"}]},{"id":"list-v","pos":"verb","gloss":"（一覧に）載せる・挙げる","pattern":"be listed on/in; list three things","items":[{"id":"list-v-1","s":"All the prices are ___ on the menu.","a":"listed","form":"past participle","cue":"載っている"}]}]},{"order":25,"rank":524,"lemma":"wish","senses":[{"id":"wish-v-unreal","pos":"verb","gloss":"〜ならいいのにと思う","pattern":"I wish + past (could/had/were)","items":[{"id":"wish-v-unreal-1","s":"I ___ I could speak English well.","a":"wish","form":"base","cue":"（〜できたら）いいのに"}]},{"id":"wish-v-hope","pos":"verb","gloss":"（幸運などを）祈る","pattern":"wish someone luck / the best","items":[{"id":"wish-v-hope-1","s":"I ___ you good luck.","a":"wish","form":"base","cue":"祈る"}]},{"id":"wish-n","pos":"noun","gloss":"願い","pattern":"make a wish; your wish came true; best wishes","items":[{"id":"wish-n-1","s":"Close your eyes and make a ___.","a":"wish","form":"base","cue":"願い事"}]}]},{"order":26,"rank":526,"lemma":"wear","senses":[{"id":"wear-v","pos":"verb","gloss":"着る・身につける","pattern":"wear a dress/glasses/a uniform","items":[{"id":"wear-v-1","s":"She is ___ a red dress today.","a":"wearing","form":"-ing","cue":"着ている"}]}]},{"order":27,"rank":527,"lemma":"fund","senses":[{"id":"fund-n","pos":"noun","gloss":"資金・基金","pattern":"raise funds; a fund for","items":[{"id":"fund-n-1","s":"The school is raising ___ for a new library.","a":"funds","form":"plural","cue":"資金"}]},{"id":"fund-v","pos":"verb","gloss":"資金を出す","pattern":"be funded by; fund research","items":[{"id":"fund-v-1","s":"The project is ___ by the government.","a":"funded","form":"past participle","cue":"資金提供されている"}]}]},{"order":28,"rank":528,"lemma":"rest","senses":[{"id":"rest-n-remainder","pos":"noun","gloss":"残り","pattern":"the rest of","items":[{"id":"rest-n-remainder-1","s":"I will finish the ___ of my homework tonight.","a":"rest","form":"base","cue":"残り"}]},{"id":"rest-relax","pos":"noun/verb","gloss":"休み・休む","pattern":"take a rest; need to rest","items":[{"id":"rest-relax-1","s":"You look tired. Take a ___.","a":"rest","form":"base","cue":"休憩"}]}]},{"order":29,"rank":529,"lemma":"kid","senses":[{"id":"kid-n","pos":"noun","gloss":"子ども","pattern":"kids (66%); when I was a kid","items":[{"id":"kid-n-1","s":"The ___ are playing outside.","a":"kids","form":"plural","cue":"子どもたち（くだけた言い方）"}]}]},{"order":30,"rank":530,"lemma":"industry","senses":[{"id":"industry-n","pos":"noun","gloss":"産業・業界","pattern":"the music/car industry","items":[{"id":"industry-n-1","s":"He works in the music ___.","a":"industry","form":"base","cue":"業界"}]}]},{"order":31,"rank":531,"lemma":"education","senses":[{"id":"education-n","pos":"noun","gloss":"教育","pattern":"a good education; higher education","items":[{"id":"education-n-1","s":"Everyone has the right to an ___.","a":"education","form":"base","cue":"教育"}]}]},{"order":32,"rank":532,"lemma":"measure","senses":[{"id":"measure-v","pos":"verb","gloss":"測る","pattern":"measure size/height; how do you measure","items":[{"id":"measure-v-1","s":"Please ___ the size of the window.","a":"measure","form":"base","cue":"測って"}]},{"id":"measure-n","pos":"noun","gloss":"対策・措置","pattern":"take measures; safety/security measures","items":[{"id":"measure-n-1","s":"The city took new ___ to stop crime.","a":"measures","form":"plural","cue":"対策"}]}]},{"order":33,"rank":533,"lemma":"kill","senses":[{"id":"kill-v","pos":"verb","gloss":"殺す・命を奪う","pattern":"be killed in; kill time","items":[{"id":"kill-v-1","s":"Thousands of people were ___ in the war.","a":"killed","form":"past participle","cue":"命を奪われた"}]}]},{"order":34,"rank":534,"lemma":"serve","senses":[{"id":"serve-v-food","pos":"verb","gloss":"（料理を）出す","pattern":"serve food/dinner; be served","items":[{"id":"serve-v-food-1","s":"Dinner is ___ at seven.","a":"served","form":"past participle","cue":"出される"}]},{"id":"serve-v-work","pos":"verb","gloss":"務める・尽くす","pattern":"serve as; serve in the army; serve the people","items":[{"id":"serve-v-work-1","s":"He ___ in the army for four years.","a":"served","form":"past","cue":"勤めた"}]}]},{"order":35,"rank":535,"lemma":"likely","senses":[{"id":"likely-adj","pos":"adjective","gloss":"〜しそうな","pattern":"be likely to; more likely to","items":[{"id":"likely-adj-1","s":"It is ___ to rain this afternoon.","a":"likely","form":"base","cue":"（〜し）そう"}]},{"id":"likely-adv","pos":"adverb","gloss":"おそらく","pattern":"most likely; very likely","items":[{"id":"likely-adv-1","s":"She will most ___ be late again.","a":"likely","form":"base","cue":"おそらく"}]}]},{"order":36,"rank":536,"lemma":"certainly","senses":[{"id":"certainly-adv","pos":"adverb","gloss":"確かに・必ず","pattern":"certainly + verb; almost certainly","items":[{"id":"certainly-adv-1","s":"She is ___ the best student in our class.","a":"certainly","form":"base","cue":"確かに"}]}]},{"order":37,"rank":537,"lemma":"national","senses":[{"id":"national-adj","pos":"adjective","gloss":"国の・全国の","pattern":"national park/team/holiday","items":[{"id":"national-adj-1","s":"We visited a ___ park in Hokkaido.","a":"national","form":"base","cue":"国立（の）"}]}]},{"order":38,"rank":539,"lemma":"teach","senses":[{"id":"teach-v","pos":"verb","gloss":"教える","pattern":"teach someone (how) to; teach at","items":[{"id":"teach-v-1","s":"My mother ___ English at a high school.","a":"teaches","form":"3sg","cue":"教えている"}]}]},{"order":39,"rank":540,"lemma":"field","senses":[{"id":"field-n-ground","pos":"noun","gloss":"野原・畑・競技場","pattern":"on the field; rice fields","items":[{"id":"field-n-ground-1","s":"The kids are playing soccer on the ___.","a":"field","form":"base","cue":"グラウンド"}]},{"id":"field-n-area","pos":"noun","gloss":"分野","pattern":"in the field of; an expert in the field","items":[{"id":"field-n-area-1","s":"She is an expert in her ___.","a":"field","form":"base","cue":"分野"}]}]},{"order":40,"rank":541,"lemma":"security","senses":[{"id":"security-n","pos":"noun","gloss":"警備・安全・セキュリティ","pattern":"airport security; security cameras; call security","items":[{"id":"security-n-1","s":"The airport has strict ___.","a":"security","form":"base","cue":"警備"}]}]},{"order":41,"rank":542,"lemma":"air","senses":[{"id":"air-n","pos":"noun","gloss":"空気・空中","pattern":"fresh air; by air; in the air","items":[{"id":"air-n-1","s":"Let's open the window and get some fresh ___.","a":"air","form":"base","cue":"空気"}]}]},{"order":42,"rank":543,"lemma":"benefit","senses":[{"id":"benefit-n","pos":"noun","gloss":"利点・恩恵","pattern":"health benefits; the benefits of; for someone's benefit","items":[{"id":"benefit-n-1","s":"Exercise has many health ___.","a":"benefits","form":"plural","cue":"効用"}]},{"id":"benefit-v","pos":"verb","gloss":"恩恵を受ける・得をする","pattern":"benefit from","items":[{"id":"benefit-v-1","s":"Everyone will ___ from the new park.","a":"benefit","form":"base","cue":"恩恵を受ける"}]}]},{"order":43,"rank":544,"lemma":"trade","senses":[{"id":"trade-n","pos":"noun","gloss":"貿易・取引","pattern":"trade with; free trade agreement","items":[{"id":"trade-n-1","s":"Japan does a lot of ___ with China.","a":"trade","form":"base","cue":"貿易"}]},{"id":"trade-v","pos":"verb","gloss":"交換する","pattern":"trade places/seats; trade X for Y","items":[{"id":"trade-v-1","s":"Do you want to ___ seats with me?","a":"trade","form":"base","cue":"交換する"}]}]},{"order":44,"rank":545,"lemma":"risk","senses":[{"id":"risk-n","pos":"noun","gloss":"危険・リスク","pattern":"the risk of; take risks; at risk","items":[{"id":"risk-n-1","s":"Smoking increases the ___ of heart disease.","a":"risk","form":"base","cue":"危険（性）"}]},{"id":"risk-v","pos":"verb","gloss":"危険を冒す・かける","pattern":"risk your life; risk + -ing","items":[{"id":"risk-v-1","s":"He ___ his life to save the girl.","a":"risked","form":"past","cue":"（命を）かけた"}]}]},{"order":45,"rank":546,"lemma":"news","senses":[{"id":"news-n","pos":"noun","gloss":"ニュース・知らせ","pattern":"good/bad news; hear the news; watch the news","items":[{"id":"news-n-1","s":"Did you hear the ___?","a":"news","form":"base","cue":"知らせ"}]}]},{"order":46,"rank":547,"lemma":"standard","senses":[{"id":"standard-n","pos":"noun","gloss":"基準・水準","pattern":"high standards; meet standards; by any standard","items":[{"id":"standard-n-1","s":"This school has high ___.","a":"standards","form":"plural","cue":"水準"}]},{"id":"standard-adj","pos":"adjective","gloss":"標準の・普通の","pattern":"a standard room/size; standard practice","items":[{"id":"standard-adj-1","s":"We booked a ___ room with one bed.","a":"standard","form":"base","cue":"標準（の）"}]}]},{"order":47,"rank":548,"lemma":"vote","senses":[{"id":"vote-v","pos":"verb","gloss":"投票する","pattern":"vote for; vote in elections","items":[{"id":"vote-v-1","s":"Who did you ___ for?","a":"vote","form":"base","cue":"投票した"}]},{"id":"vote-n","pos":"noun","gloss":"票・投票","pattern":"percent of the vote; count the votes; take a vote","items":[{"id":"vote-n-1","s":"She won 60 percent of the ___.","a":"vote","form":"base","cue":"票"}]}]},{"order":48,"rank":549,"lemma":"percent","senses":[{"id":"percent-n","pos":"noun","gloss":"パーセント","pattern":"number + percent (of)","items":[{"id":"percent-n-1","s":"About 30 ___ of the students live alone.","a":"percent","form":"base","cue":"パーセント"}]}]},{"order":49,"rank":550,"lemma":"focus","senses":[{"id":"focus-v","pos":"verb","gloss":"集中する・重点を置く","pattern":"focus on","items":[{"id":"focus-v-1","s":"Please ___ on your work.","a":"focus","form":"base","cue":"集中して"}]},{"id":"focus-n","pos":"noun","gloss":"重点・集中","pattern":"the main focus of; lose focus","items":[{"id":"focus-n-1","s":"The main ___ of this class is grammar.","a":"focus","form":"base","cue":"重点"}]}]},{"order":50,"rank":551,"lemma":"stage","senses":[{"id":"stage-n-theater","pos":"noun","gloss":"舞台・ステージ","pattern":"on stage; walk onto the stage","items":[{"id":"stage-n-theater-1","s":"The singer walked onto the ___.","a":"stage","form":"base","cue":"舞台"}]},{"id":"stage-n-phase","pos":"noun","gloss":"段階","pattern":"in the early stages; at this stage","items":[{"id":"stage-n-phase-1","s":"The plan is still in the early ___.","a":"stages","form":"plural","cue":"段階"}]}]}];
@@ -375,6 +403,11 @@ const STR = {
     knownNow: "正解！最初から知っている単語なので、練習から外します（練習クイズには出ます）。",
     reviewSetting: "復習", skipKnown: "最初に正解した単語を練習から外す", skipKnownNote: "初めて見た単語に1回目で正解すると「既知」になり、練習には出なくなります（練習クイズには出ます）。オフにすると、すべての単語を練習します。",
     allDoneTitle: "この週の単語はすべて習得済みです", allDoneBody: "練習クイズで確認しましょう。",
+    timeSetting: "1問の制限時間", s10: "10秒", s15: "15秒", s20: "20秒", s30: "30秒",
+    timeNote: "練習と練習クイズの時間です。授業内のクイズは1問15秒です。",
+    freeBtn: "自由に復習する", freeTitle: "自由復習を始めますか？",
+    freeBody: "この復習の結果は、クレセントの進み具合に影響しません（上がりも下がりもしません）。",
+    freeGo: "始める", freeBack: "やめる", freeLabel: "自由復習（記録されません）",
     weekStatusK: (w, a, b, k) => `第${w}週：${a} / ${b} の意味を習得（既知 ${k}）`,
     typed: (t) => `ちがいます。入力：「${t}」`, timeUp: "時間切れです。",
     missAgain: "正しい答えを緑で表示しています。この意味はこのセッションの後半にもう一度出ます。準備ができたら「次へ」かEnterを押してください。",
@@ -404,6 +437,11 @@ const STR = {
     knownNow: "Correct! You knew this one already, so it will be skipped in practice (it still appears in practice quizzes).",
     reviewSetting: "Review", skipKnown: "Skip words I knew the first time", skipKnownNote: "A word answered correctly the first time you ever see it becomes \"known\" and leaves practice (it still appears in practice quizzes). Turn this off to practise every word.",
     allDoneTitle: "All of this week's words are learned", allDoneBody: "Check them with a practice quiz.",
+    timeSetting: "Time per item", s10: "10 s", s15: "15 s", s20: "20 s", s30: "30 s",
+    timeNote: "Used for practice and practice quizzes. Classroom quizzes use 15 seconds per item.",
+    freeBtn: "Review anyway", freeTitle: "Keep reviewing anyway?",
+    freeBody: "These results will not raise or lower your Crescent progress.",
+    freeGo: "Start", freeBack: "Cancel", freeLabel: "Free review (not recorded)",
     weekStatusK: (w, a, b, k) => `Week ${w}: ${a} of ${b} meanings learned (${k} known)`,
     typed: (t) => `Not quite. You typed “${t}”.`, timeUp: "Time ran out.",
     missAgain: "The correct answer is shown in green. This meaning will come back later in this session. Press Continue or Enter when you are ready.",
@@ -419,6 +457,7 @@ const STR = {
     footer: ["Crescent: like the moon, your vocabulary grows a little each week, from a thin crescent to a full moon.", "Word list: New General Service List (Browne & Culligan), Creative Commons.", "Week 1: 50 words from NGSL rank 500, 82 meanings, one draft sentence per meaning (start-up set), written from COCA evidence. Not yet reviewed."]
   }
 };
+TIME_LIMIT = (() => { const v = parseInt(store.get("crescent.seconds"), 10); return TIME_CHOICES.includes(v) ? v : 15; })();
 let LANG = store.get("crescent.lang") === "en" ? "en" : "ja";
 /* Known words (answered correctly the first time ever seen in practice) are skipped in practice; on by default. */
 let SKIP_KNOWN = store.get("crescent.skipKnown") !== "0";
@@ -430,11 +469,15 @@ function applyLang() {
   $("#demo-note").hidden = !DEMO; $("#demo-note").textContent = t("demoNote");
   document.querySelectorAll('input[name="lang"]').forEach((r) => { r.checked = r.value === LANG; });
   $("#skip-known").checked = SKIP_KNOWN;
+  document.querySelectorAll('input[name="secs"]').forEach((r) => { r.checked = +r.value === TIME_LIMIT; });
   renderHome();
 }
 $("#open-settings").addEventListener("click", () => { $("#settings-dialog").hidden = false; });
 $("#settings-close").addEventListener("click", () => { $("#settings-dialog").hidden = true; renderHome(); });
 $("#skip-known").addEventListener("change", (e) => { SKIP_KNOWN = e.target.checked; store.set("crescent.skipKnown", SKIP_KNOWN ? "1" : "0"); });
+document.querySelectorAll('input[name="secs"]').forEach((r) => r.addEventListener("change", () => {
+  TIME_LIMIT = +r.value; store.set("crescent.seconds", String(TIME_LIMIT));
+}));
 document.querySelectorAll('input[name="lang"]').forEach((r) => r.addEventListener("change", () => {
   LANG = r.value; store.set("crescent.lang", LANG); applyLang();
 }));
@@ -542,18 +585,30 @@ $("#later-go").addEventListener("click", () => { $("#later-dialog").hidden = tru
 $("#later-back").addEventListener("click", () => { $("#later-dialog").hidden = true; pendingAction = null; });
 
 /* ---------- Practice: 12 meanings, lowest levels first ---------- */
-const prac = { queue: [], total: 0, shown: 0, firstTry: 0, dropped: new Set(), current: null, state: "idle", timer: null, week: 1 };
+const prac = { queue: [], total: 0, shown: 0, firstTry: 0, dropped: new Set(), current: null, state: "idle", timer: null, week: 1, free: false };
 
 function startPractice(w) {
   const wk = WEEKS[w - 1];
   const units = [];
   wk.heads.forEach((h) => h.senses.forEach((s) => { if (!(SKIP_KNOWN && isKnown(s.id))) units.push({ lemma: h.lemma, sense: s }); }));
-  prac.week = w;
+  prac.week = w; prac.free = false;
   show("practice");
   if (!units.length) { $("#p-run").hidden = true; $("#p-done").hidden = true; $("#p-empty").hidden = false; return; }
-  $("#p-empty").hidden = true;
   /* lowest level first; random order within a level */
-  const chosen = shuffle(units).sort((a, b) => level(a.sense.id) - level(b.sense.id)).slice(0, SESSION_SIZE);
+  runPractice(shuffle(units).sort((a, b) => level(a.sense.id) - level(b.sense.id)).slice(0, SESSION_SIZE));
+}
+/* Free review: all of the week's meanings (known ones included) in random order. Nothing is recorded:
+   levels, the known list, review badges and moons do not change. Offered only when a week is finished. */
+function startFreeReview(w) {
+  const units = [];
+  WEEKS[w - 1].heads.forEach((h) => h.senses.forEach((s) => units.push({ lemma: h.lemma, sense: s })));
+  prac.week = w; prac.free = true;
+  show("practice");
+  runPractice(shuffle(units).slice(0, SESSION_SIZE));
+}
+function runPractice(chosen) {
+  $("#p-empty").hidden = true;
+  $("#p-free").hidden = !prac.free;
   prac.queue = chosen.map((u) => ({ ...u, used: new Set(), attempts: 0 }));
   prac.total = prac.queue.length; prac.shown = 0; prac.firstTry = 0; prac.dropped = new Set();
   $("#p-done").hidden = true; $("#p-run").hidden = false;
@@ -605,8 +660,9 @@ $("#p-form").addEventListener("submit", (e) => {
   if (norm(typed) === norm(item.a)) {
     if (unit.attempts === 0) prac.firstTry++;
     prac.state = "correct";
-    const firstEver = unit.attempts === 0 && !prog[unit.sense.id];
-    if (firstEver && SKIP_KNOWN) markKnown(unit.sense.id); else applyResult(unit.sense.id, true, prac.dropped);
+    const firstEver = !prac.free && unit.attempts === 0 && !prog[unit.sense.id];
+    if (prac.free) { /* free review: not recorded */ }
+    else if (firstEver && SKIP_KNOWN) markKnown(unit.sense.id); else applyResult(unit.sense.id, true, prac.dropped);
     fb.className = "feedback ok"; fb.hidden = false;
     $("#p-sentence").innerHTML = sentenceHTML(item.s, item.a, "fill-ok");
     fb.innerHTML = `<span>${esc(t(firstEver && SKIP_KNOWN ? "knownNow" : "correct"))}</span>`;
@@ -621,7 +677,7 @@ $("#p-form").addEventListener("submit", (e) => {
    The meaning drops one level and comes back once later in the session. */
 function showMiss(unit, item, verdict) {
   unit.attempts++;
-  applyResult(unit.sense.id, false, prac.dropped);
+  if (!prac.free) applyResult(unit.sense.id, false, prac.dropped);
   const comesBack = unit.attempts === 1;
   if (comesBack) prac.queue.splice(Math.min(3, prac.queue.length), 0, unit);
   prac.state = "feedback";
@@ -678,11 +734,14 @@ function finishPractice() {
   prac.state = "idle";
   $("#p-run").hidden = true; $("#p-done").hidden = false;
   $("#p-score").textContent = `${prac.firstTry} / ${prac.total}`;
-  $("#p-score-note").textContent = t("sessionNote", prac.firstTry, prac.total);
+  $("#p-score-note").textContent = t("sessionNote", prac.firstTry, prac.total) + (prac.free ? " · " + t("freeLabel") : "");
   const s = weekStats(WEEKS[prac.week - 1]);
   $("#p-weekmoon").innerHTML = moonSVG(s.learned, s.total) + `<span>${esc(s.known ? t("weekStatusK", prac.week, s.learned, s.total, s.known) : t("weekStatus", prac.week, s.learned, s.total))}</span>`;
 }
-$("#p-more").addEventListener("click", () => startPractice(prac.week));
+$("#p-more").addEventListener("click", () => (prac.free ? startFreeReview : startPractice)(prac.week));
+$("#p-empty-free").addEventListener("click", () => { $("#free-dialog").hidden = false; });
+$("#free-go").addEventListener("click", () => { $("#free-dialog").hidden = true; startFreeReview(prac.week); });
+$("#free-back").addEventListener("click", () => { $("#free-dialog").hidden = true; });
 $("#p-empty-quiz").addEventListener("click", () => startPracticeQuiz(prac.week));
 $("#p-empty-home").addEventListener("click", () => { renderHome(); show("home"); });
 $("#p-home").addEventListener("click", () => { renderHome(); show("home"); });

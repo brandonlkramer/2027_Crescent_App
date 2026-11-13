@@ -268,7 +268,7 @@ async function admin(request, env, url) {
     const n_items = Math.min(MAX_ITEMS, Math.max(1, parseInt(b.n_items ?? 20, 10)));
     const new_ratio = Math.min(1, Math.max(0, Number(b.new_ratio ?? 0.8)));
     const keyboard = b.keyboard === "full" ? "full" : "restricted";
-    const seconds = Math.min(60, Math.max(3, parseInt(b.seconds ?? 10, 10)));
+    const seconds = Math.min(60, Math.max(3, parseInt(b.seconds ?? 15, 10)));
     const classes = (Array.isArray(b.classes) ? b.classes : []).map((c) => String(c).slice(0, 40)).filter(Boolean);
     if (!(week >= 1)) return json({ error: "Week must be 1 or higher" }, 400);
     if (!classes.length) return json({ error: "Choose at least one class" }, 400);
