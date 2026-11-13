@@ -79,7 +79,7 @@ p { margin: 0; }
 .sets { display: flex; flex-direction: column; gap: 10px; }
 .set-option { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--surface); cursor: pointer; }
 .set-option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-.set-option input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+.set-option input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; flex: none; }
 .set-option strong { display: block; }
 .btn { border: 0; border-radius: 12px; padding: 13px 18px; font: 700 1rem var(--font-body); cursor: pointer; background: var(--accent); color: var(--surface); }
 .btn.secondary { background: var(--key); color: var(--ink); }
@@ -174,6 +174,9 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
 .answer-display.wrong, .answer-form input.wrong { border-color: var(--bad); color: var(--bad); animation: shake 0.35s; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
 .retry-msg { color: var(--bad); font-weight: 700; min-height: 1.5em; font-family: var(--font-ja); }
+.dialog .set-option { text-transform: none; letter-spacing: 0; font-size: 1rem; font-weight: 400; color: var(--ink); }
+.dialog .set-option .muted { display: block; font-weight: 400; margin-top: 2px; }
+.dialog .set-option input { flex: none; width: 18px; min-width: 18px; height: 18px; padding: 0; border: 0; }
 .week-moon-row { display: flex; align-items: center; gap: 12px; }
 .week-moon-row .moon { width: 56px; height: 56px; }
 @media (prefers-reduced-motion: reduce) { .answer-display.wrong, .answer-form input.wrong { animation: none; } }
@@ -227,6 +230,15 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
           <div class="feedback" id="p-feedback" hidden aria-live="polite"></div>
         </article>
         <button class="btn secondary" id="p-quit" type="button" data-t="endSession"></button>
+      </div>
+
+      <div id="p-empty" class="stack" hidden>
+        <h2 data-t="allDoneTitle"></h2>
+        <p class="muted" data-t="allDoneBody"></p>
+        <div class="row">
+          <button class="btn" id="p-empty-quiz" type="button" data-t="pquiz"></button>
+          <button class="btn secondary" id="p-empty-home" type="button" data-t="home"></button>
+        </div>
       </div>
 
       <div id="p-done" class="stack" hidden>
@@ -292,6 +304,10 @@ footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--lin
         <label class="set-option"><input type="radio" name="lang" value="en"><span><strong>English</strong></span></label>
       </div>
     </fieldset>
+    <fieldset class="field">
+      <legend data-t="reviewSetting"></legend>
+      <label class="set-option"><input type="checkbox" id="skip-known"><span><strong data-t="skipKnown"></strong><span class="muted small" data-t="skipKnownNote"></span></span></label>
+    </fieldset>
     <button class="btn" id="settings-close" type="button" data-t="close"></button>
   </div>
 </div>
@@ -348,7 +364,7 @@ const STR = {
     tag: "試作版 · 第1週ドラフト", settings: "設定", language: "表示言語", close: "閉じる",
     homeTitle: "学習する週を選ぶ", homeNote: "月は、その週の意味を覚えるほど満ちていきます。",
     week: (n) => `第${n}週`, thisWeek: "今週", laterBadge: "これから",
-    weekLine: (r, a, b) => `NGSL ${r} · ${a} / ${b} 習得`, missed: (n) => `復習 ${n}`,
+    weekLine: (r, a, b, k) => `NGSL ${r} · ${a} / ${b} 習得` + (k ? ` · 既知 ${k}` : ""), missed: (n) => `復習 ${n}`,
     study: "単語を学習", studySub: (n) => `第${n}週`, pquiz: "練習クイズ", pquizSub: (n) => n === 1 ? "第1週" : `第1〜${n}週`,
     capOverall: (w, a, b) => (w === 1 ? "第1週" : `第1〜${w}週`) + `：${a} / ${b} の意味を習得`,
     laterTitle: "この週はまだ始まっていません", laterBody: "前の週の単語をしっかり覚えてから進むのがおすすめです。このまま学習しますか？",
@@ -356,6 +372,10 @@ const STR = {
     demoNote: "テストモード（#demo）：第1週を25語ずつの2週に分けています。",
     timeLeft: "残り時間", sLeft: "秒", paused: "一時停止", check: "答える", cont: "次へ", endSession: "終了する", again: "もう一度",
     pCount: (i, n) => `${i} / ${n}`, correct: "正解！",
+    knownNow: "正解！最初から知っている単語なので、練習から外します（練習クイズには出ます）。",
+    reviewSetting: "復習", skipKnown: "最初に正解した単語を練習から外す", skipKnownNote: "初めて見た単語に1回目で正解すると「既知」になり、練習には出なくなります（練習クイズには出ます）。オフにすると、すべての単語を練習します。",
+    allDoneTitle: "この週の単語はすべて習得済みです", allDoneBody: "練習クイズで確認しましょう。",
+    weekStatusK: (w, a, b, k) => `第${w}週：${a} / ${b} の意味を習得（既知 ${k}）`,
     typed: (t) => `ちがいます。入力：「${t}」`, timeUp: "時間切れです。",
     missAgain: "正しい答えを緑で表示しています。この意味はこのセッションの後半にもう一度出ます。準備ができたら「次へ」かEnterを押してください。",
     missOnce: "正しい答えを緑で表示しています。準備ができたら「次へ」かEnterを押してください。",
@@ -373,7 +393,7 @@ const STR = {
     tag: "Prototype · week 1 draft", settings: "Settings", language: "Language", close: "Close",
     homeTitle: "Choose a week", homeNote: "Each moon fills as you learn that week's meanings.",
     week: (n) => `Week ${n}`, thisWeek: "This week", laterBadge: "Upcoming",
-    weekLine: (r, a, b) => `NGSL ${r} · ${a}/${b} learned`, missed: (n) => `${n} to review`,
+    weekLine: (r, a, b, k) => `NGSL ${r} · ${a}/${b} learned` + (k ? ` · ${k} known` : ""), missed: (n) => `${n} to review`,
     study: "Study words", studySub: (n) => `Week ${n}`, pquiz: "Practice quiz", pquizSub: (n) => n === 1 ? "Week 1" : `Weeks 1–${n}`,
     capOverall: (w, a, b) => (w === 1 ? "Week 1" : `Weeks 1–${w}`) + `: ${a} of ${b} meanings learned`,
     laterTitle: "This week hasn't started yet", laterBody: "It's usually better to master the earlier words first. Study this week anyway?",
@@ -381,6 +401,10 @@ const STR = {
     demoNote: "Test mode (#demo): week 1 is split into two weeks of 25 words.",
     timeLeft: "Time left", sLeft: "s left", paused: "Paused", check: "Check", cont: "Continue", endSession: "End session", again: "Again",
     pCount: (i, n) => `${i} of ${n}`, correct: "Correct",
+    knownNow: "Correct! You knew this one already, so it will be skipped in practice (it still appears in practice quizzes).",
+    reviewSetting: "Review", skipKnown: "Skip words I knew the first time", skipKnownNote: "A word answered correctly the first time you ever see it becomes \"known\" and leaves practice (it still appears in practice quizzes). Turn this off to practise every word.",
+    allDoneTitle: "All of this week's words are learned", allDoneBody: "Check them with a practice quiz.",
+    weekStatusK: (w, a, b, k) => `Week ${w}: ${a} of ${b} meanings learned (${k} known)`,
     typed: (t) => `Not quite. You typed “${t}”.`, timeUp: "Time ran out.",
     missAgain: "The correct answer is shown in green. This meaning will come back later in this session. Press Continue or Enter when you are ready.",
     missOnce: "The correct answer is shown in green. Press Continue or Enter when you are ready.",
@@ -396,6 +420,8 @@ const STR = {
   }
 };
 let LANG = store.get("crescent.lang") === "en" ? "en" : "ja";
+/* Known words (answered correctly the first time ever seen in practice) are skipped in practice; on by default. */
+let SKIP_KNOWN = store.get("crescent.skipKnown") !== "0";
 const t = (k, ...a) => { const v = STR[LANG][k]; return typeof v === "function" ? v(...a) : v; };
 function applyLang() {
   document.documentElement.lang = LANG;
@@ -403,10 +429,12 @@ function applyLang() {
   $("#footer").innerHTML = STR[LANG].footer.map((s) => `<span>${esc(s)}</span>`).join("");
   $("#demo-note").hidden = !DEMO; $("#demo-note").textContent = t("demoNote");
   document.querySelectorAll('input[name="lang"]').forEach((r) => { r.checked = r.value === LANG; });
+  $("#skip-known").checked = SKIP_KNOWN;
   renderHome();
 }
 $("#open-settings").addEventListener("click", () => { $("#settings-dialog").hidden = false; });
-$("#settings-close").addEventListener("click", () => { $("#settings-dialog").hidden = true; });
+$("#settings-close").addEventListener("click", () => { $("#settings-dialog").hidden = true; renderHome(); });
+$("#skip-known").addEventListener("change", (e) => { SKIP_KNOWN = e.target.checked; store.set("crescent.skipKnown", SKIP_KNOWN ? "1" : "0"); });
 document.querySelectorAll('input[name="lang"]').forEach((r) => r.addEventListener("change", () => {
   LANG = r.value; store.set("crescent.lang", LANG); applyLang();
 }));
@@ -437,8 +465,14 @@ const saveProg = () => store.set("crescent.progress.v2", JSON.stringify(prog));
 const rec = (id) => prog[id] || (prog[id] = { lv: 0, up: "", miss: false });
 const level = (id) => (prog[id] ? prog[id].lv : 0);
 const isLearned = (id) => level(id) >= LEARNED_LEVEL;
+/* Known list: a correct first-ever answer in practice (full keyboard, no letter hints) marks the meaning as known:
+   it counts as learned (level 3) and is skipped in practice while the setting is on. A first sighting in a practice quiz
+   does not count. A known meaning that is later missed leaves the list and returns to level 2. */
+const isKnown = (id) => !!(prog[id] && prog[id].known);
+function markKnown(id) { prog[id] = { lv: LEARNED_LEVEL, up: todayStr(), miss: false, known: true }; saveProg(); }
 function applyResult(id, ok, dropped) {
   const r = rec(id);
+  if (!ok && r.known) { r.known = false; r.miss = true; r.lv = LEARNED_LEVEL - 1; if (dropped) dropped.add(id); saveProg(); return; }
   if (ok) {
     r.miss = false;
     if (r.lv < MAX_LEVEL && r.up !== todayStr()) { r.lv++; r.up = todayStr(); }
@@ -448,7 +482,7 @@ function applyResult(id, ok, dropped) {
   }
   saveProg();
 }
-const weekStats = (wk) => ({ learned: wk.senses.filter(isLearned).length, total: wk.senses.length, missed: wk.senses.filter((id) => prog[id] && prog[id].miss).length });
+const weekStats = (wk) => ({ learned: wk.senses.filter(isLearned).length, total: wk.senses.length, missed: wk.senses.filter((id) => prog[id] && prog[id].miss).length, known: wk.senses.filter(isKnown).length });
 
 /* ---------- Moons ---------- */
 function moonPath(frac) {
@@ -484,7 +518,7 @@ function renderHome() {
     return `<div class="wk${wk.n === cw ? " current" : ""}${later ? " later" : ""}" id="wk-${wk.n}">
       <div class="info">${moonSVG(s.learned, s.total)}<div style="min-width:0">
         <div class="title">${esc(t("week", wk.n))}${wk.n === cw ? `<span class="badge">${esc(t("thisWeek"))}</span>` : ""}${later ? `<span class="badge later">${esc(t("laterBadge"))}</span>` : ""}${s.missed ? `<span class="badge miss">${esc(t("missed", s.missed))}</span>` : ""}</div>
-        <div class="muted small">${esc(t("weekLine", wk.range, s.learned, s.total))}</div></div></div>
+        <div class="muted small">${esc(t("weekLine", wk.range, s.learned, s.total, s.known))}</div></div></div>
       <div class="btns">
         <button class="btn" type="button" data-act="study" data-w="${wk.n}">${esc(t("study"))}<small>${esc(t("studySub", wk.n))}</small></button>
         <button class="btn secondary" type="button" data-act="quiz" data-w="${wk.n}">${esc(t("pquiz"))}<small>${esc(t("pquizSub", wk.n))}</small></button>
@@ -513,13 +547,16 @@ const prac = { queue: [], total: 0, shown: 0, firstTry: 0, dropped: new Set(), c
 function startPractice(w) {
   const wk = WEEKS[w - 1];
   const units = [];
-  wk.heads.forEach((h) => h.senses.forEach((s) => units.push({ lemma: h.lemma, sense: s })));
+  wk.heads.forEach((h) => h.senses.forEach((s) => { if (!(SKIP_KNOWN && isKnown(s.id))) units.push({ lemma: h.lemma, sense: s }); }));
+  prac.week = w;
+  show("practice");
+  if (!units.length) { $("#p-run").hidden = true; $("#p-done").hidden = true; $("#p-empty").hidden = false; return; }
+  $("#p-empty").hidden = true;
   /* lowest level first; random order within a level */
   const chosen = shuffle(units).sort((a, b) => level(a.sense.id) - level(b.sense.id)).slice(0, SESSION_SIZE);
   prac.queue = chosen.map((u) => ({ ...u, used: new Set(), attempts: 0 }));
-  prac.total = prac.queue.length; prac.shown = 0; prac.firstTry = 0; prac.dropped = new Set(); prac.week = w;
+  prac.total = prac.queue.length; prac.shown = 0; prac.firstTry = 0; prac.dropped = new Set();
   $("#p-done").hidden = true; $("#p-run").hidden = false;
-  show("practice");
   nextPractice();
 }
 function nextPractice() {
@@ -568,12 +605,13 @@ $("#p-form").addEventListener("submit", (e) => {
   if (norm(typed) === norm(item.a)) {
     if (unit.attempts === 0) prac.firstTry++;
     prac.state = "correct";
-    applyResult(unit.sense.id, true, prac.dropped);
+    const firstEver = unit.attempts === 0 && !prog[unit.sense.id];
+    if (firstEver && SKIP_KNOWN) markKnown(unit.sense.id); else applyResult(unit.sense.id, true, prac.dropped);
     fb.className = "feedback ok"; fb.hidden = false;
     $("#p-sentence").innerHTML = sentenceHTML(item.s, item.a, "fill-ok");
-    fb.innerHTML = `<span>${esc(t("correct"))}</span>`;
+    fb.innerHTML = `<span>${esc(t(firstEver && SKIP_KNOWN ? "knownNow" : "correct"))}</span>`;
     updatePracticeMeta();
-    prac.timer = setTimeout(nextPractice, 900);
+    prac.timer = setTimeout(nextPractice, firstEver && SKIP_KNOWN ? 1800 : 900);
   } else {
     showMiss(unit, item, t("typed", esc(typed.trim())));
   }
@@ -642,9 +680,11 @@ function finishPractice() {
   $("#p-score").textContent = `${prac.firstTry} / ${prac.total}`;
   $("#p-score-note").textContent = t("sessionNote", prac.firstTry, prac.total);
   const s = weekStats(WEEKS[prac.week - 1]);
-  $("#p-weekmoon").innerHTML = moonSVG(s.learned, s.total) + `<span>${esc(t("weekStatus", prac.week, s.learned, s.total))}</span>`;
+  $("#p-weekmoon").innerHTML = moonSVG(s.learned, s.total) + `<span>${esc(s.known ? t("weekStatusK", prac.week, s.learned, s.total, s.known) : t("weekStatus", prac.week, s.learned, s.total))}</span>`;
 }
 $("#p-more").addEventListener("click", () => startPractice(prac.week));
+$("#p-empty-quiz").addEventListener("click", () => startPracticeQuiz(prac.week));
+$("#p-empty-home").addEventListener("click", () => { renderHome(); show("home"); });
 $("#p-home").addEventListener("click", () => { renderHome(); show("home"); });
 
 /* ---------- Practice quiz: works like the classroom quiz, on this device only ---------- */
